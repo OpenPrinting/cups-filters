@@ -1698,6 +1698,18 @@ static void outPage(poppler::document *doc, int pageNo,
     header.PageSize[0] = (unsigned)l;
   else
     header.PageSize[1] = (unsigned)l;
+  /*
+    Maximum allowed page size for PDF is 200x200 inches (~ 5x5 m), or 14400x14400 pt
+    https://community.adobe.com/t5/indesign-discussions/maximum-width-of-a-pdf/td-p/9217372
+  */
+  if (header.PageSize[0] > 14400) {
+    fprintf(stderr, "ERROR: Page width is %dpt, too large, cropping to 14400pt\n", header.PageSize[0]);
+    header.PageSize[0] = 14400;
+  }
+  if (header.PageSize[1] > 14400) {
+    fprintf(stderr, "ERROR: Page height is %dpt, too large, cropping to 14400pt\n", header.PageSize[1]);
+    header.PageSize[1] = 14400;
+  }
 
   memset(paperdimensions, 0, sizeof(paperdimensions));
   memset(margins, 0, sizeof(margins));
