@@ -129,6 +129,15 @@ _cupsImageReadTIFF(
   if (!TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bits))
     bits = 1;
 
+  if (bits == 1 && samples > 1)
+  {
+    fprintf(stderr, "ERROR: Color images with 1 bit per sample not supported! "
+                    "Samples per pixel: %d; Bits per sample: %d\n", samples, bits);
+    TIFFClose(tif);
+    fclose(fp);
+    return (-1);
+  }
+
  /*
   * Get the image orientation...
   */
