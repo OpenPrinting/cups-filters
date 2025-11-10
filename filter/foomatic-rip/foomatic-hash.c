@@ -463,7 +463,7 @@ end:
 #else
   fprintf(stdout, "foomatic-hash is not compiled with LIBPPD support.\n");
 
-  return (0);
+  return (1);
 #endif // HAVE_LIBPPD
 }
 
