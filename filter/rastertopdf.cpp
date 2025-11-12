@@ -39,6 +39,8 @@
 #include <arpa/inet.h>   // ntohl
 
 #include <vector>
+#define POINTERHOLDER_TRANSITION 3
+#include <qpdf/PointerHolder.hh>
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFWriter.hh>
 #include <qpdf/QUtil.hh>
@@ -481,7 +483,7 @@ QPDFObjectHandle embedIccProfile(QPDF &pdf)
     cmsSaveProfileToMem(colorProfile, buff, &profile_size);
 
     // Write ICC profile buffer into PDF
-    ph = new Buffer(buff, profile_size);  
+    ph = (PointerHolder<Buffer>) new Buffer(buff, profile_size);
     iccstream = QPDFObjectHandle::newStream(&pdf, ph);
     iccstream.replaceDict(QPDFObjectHandle::newDictionary(streamdict));
 

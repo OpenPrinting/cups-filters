@@ -21,6 +21,8 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#define POINTERHOLDER_TRANSITION 3
+#include <qpdf/PointerHolder.hh>
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFObjectHandle.hh>
 #include <qpdf/QPDFWriter.hh>

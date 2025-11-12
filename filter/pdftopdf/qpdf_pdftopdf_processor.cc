@@ -83,10 +83,10 @@ QPDFObjectHandle QPDF_PDFTOPDF_PageHandle::get() // {{{
     page.getKey("/Resources").replaceKey("/XObject",QPDFObjectHandle::newDictionary(xobjs));
     content.append("Q\n");
     page.getKey("/Contents").replaceStreamData(content,QPDFObjectHandle::newNull(),QPDFObjectHandle::newNull());
-    page.replaceOrRemoveKey("/Rotate",makeRotate(rotation));
+    page.replaceKey("/Rotate",makeRotate(rotation));
   } else {
     Rotation rot=getRotate(page)+rotation;
-    page.replaceOrRemoveKey("/Rotate",makeRotate(rot));
+    page.replaceKey("/Rotate",makeRotate(rot));
   }
   page=QPDFObjectHandle(); // i.e. uninitialized
   return ret;
@@ -181,9 +181,9 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   page.assertInitialized();
   Rotation save_rotate = getRotate(page);
   if(orientation==ROT_0||orientation==ROT_180)
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_90));
+    page.replaceKey("/Rotate",makeRotate(ROT_90));
   else
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_0));
+    page.replaceKey("/Rotate",makeRotate(ROT_0));
 
   PageRect currpage= getBoxAsRect(getTrimBox(page));
   double width = currpage.right-currpage.left;
@@ -242,7 +242,7 @@ Rotation QPDF_PDFTOPDF_PageHandle::crop(const PageRect &cropRect,Rotation orient
   //Cropping.
   // TODO: Borders are covered by the image. buffer space?
   page.replaceKey("/TrimBox",makeBox(currpage.left,currpage.bottom,currpage.right,currpage.top));
-  page.replaceOrRemoveKey("/Rotate",makeRotate(save_rotate));
+  page.replaceKey("/Rotate",makeRotate(save_rotate));
   return getRotate(page);
 }
 
@@ -251,14 +251,14 @@ bool QPDF_PDFTOPDF_PageHandle::is_landscape(Rotation orientation)
   page.assertInitialized();
   Rotation save_rotate = getRotate(page);
   if(orientation==ROT_0||orientation==ROT_180)
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_90));
+    page.replaceKey("/Rotate",makeRotate(ROT_90));
   else
-    page.replaceOrRemoveKey("/Rotate",makeRotate(ROT_0));
+    page.replaceKey("/Rotate",makeRotate(ROT_0));
 
   PageRect currpage= getBoxAsRect(getTrimBox(page));
   double width = currpage.right-currpage.left;
   double height = currpage.top-currpage.bottom;
-  page.replaceOrRemoveKey("/Rotate",makeRotate(save_rotate));
+  page.replaceKey("/Rotate",makeRotate(save_rotate));
   if(width>height)
     return true;
   return false;
@@ -665,7 +665,7 @@ void QPDF_PDFTOPDF_Processor::autoRotateAll(bool dst_lscape,Rotation normal_land
       // TODO? other rotation direction, e.g. if (src_rot==ROT_0)&&(param.orientation==ROT_270) ... etc.
       // rotation=ROT_270;
 
-      page.replaceOrRemoveKey("/Rotate",makeRotate(src_rot+rotation));
+      page.replaceKey("/Rotate",makeRotate(src_rot+rotation));
     }
   }
 }

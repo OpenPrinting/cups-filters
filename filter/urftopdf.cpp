@@ -32,6 +32,8 @@
 #include <arpa/inet.h>   // ntohl
 
 #include <vector>
+#define POINTERHOLDER_TRANSITION 3
+#include <qpdf/PointerHolder.hh>
 #include <qpdf/QPDF.hh>
 #include <qpdf/QPDFWriter.hh>
 #include <qpdf/QUtil.hh>

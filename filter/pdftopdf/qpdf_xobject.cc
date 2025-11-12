@@ -1,5 +1,7 @@
 #include "qpdf_xobject.h"
 //#include <qpdf/Types.h>
+#define POINTERHOLDER_TRANSITION 3
+#include <qpdf/PointerHolder.hh>
 #include <qpdf/QPDF.hh>
 #include <qpdf/Pl_Discard.hh>
 #include <qpdf/Pl_Count.hh>
