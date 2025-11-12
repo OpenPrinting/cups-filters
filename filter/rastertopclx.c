@@ -825,10 +825,10 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
   }
 
   if (header->cupsCompression)
-    CompBuffer = malloc(DotBufferSize * 4);
+    CompBuffer = calloc(DotBufferSize * 4, sizeof(unsigned char));
 
   if (header->cupsCompression >= 3)
-    SeedBuffer = malloc(DotBufferSize);
+    SeedBuffer = calloc(DotBufferSize, sizeof(unsigned char));
 
   SeedInvalid = 1;
 
@@ -1159,6 +1159,13 @@ CompressData(unsigned char *line,	// I - Data to compress
               seed ++;
               count ++;
             }
+
+	    //
+	    // Bail out if we don't have count to compress
+	    //
+
+	    if (count == 0)
+	      break;
 	  }
 
 	  //
@@ -1251,6 +1258,13 @@ CompressData(unsigned char *line,	// I - Data to compress
             }
 
             count = line_ptr - start;
+
+	    //
+	    // Bail out if we don't have count to compress
+	    //
+
+	    if (count == 0)
+	      break;
 
 #if 0
             fprintf(stderr,
@@ -1423,6 +1437,13 @@ CompressData(unsigned char *line,	// I - Data to compress
             }
 
             count = (line_ptr - start) / 3;
+
+	    //
+	    // Bail out if we don't have count to compress
+	    //
+
+	    if (count == 0)
+	      break;
 
 	    //
 	    // Place mode 10 compression data in the buffer; each sequence
