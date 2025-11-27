@@ -122,7 +122,7 @@ _cupsImageReadTIFF(
     fputs("DEBUG: Images with planar color configuration are not supported!\n", stderr);
     TIFFClose(tif);
     fclose(fp);
-    return (1);
+    return (-1);
   }
 
   if (!TIFFGetField(tif, TIFFTAG_COMPRESSION, &compression))
@@ -228,7 +228,7 @@ _cupsImageReadTIFF(
                     samples);
     TIFFClose(tif);
     fclose(fp);
-    return (1);
+    return (-1);
   }
 
  /*
@@ -245,7 +245,7 @@ _cupsImageReadTIFF(
 	    (unsigned)samples);
     TIFFClose(tif);
     fclose(fp);
-    return (1);
+    return (-1);
   }
 
  /*
