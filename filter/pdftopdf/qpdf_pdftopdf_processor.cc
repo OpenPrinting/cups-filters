@@ -292,6 +292,12 @@ void QPDF_PDFTOPDF_PageHandle::add_subpage(const std::shared_ptr<PDFTOPDF_PageHa
     qsub->page.replaceKey("/TrimBox",makeBox(rect.left,rect.bottom,rect.right,rect.top));
     // TODO? do everything for cropping here?
   }
+  
+  // Preserve /Group from subpage to container page for performance
+  if (qsub->page.hasKey("/Group")) {
+    page.replaceKey("/Group", qsub->page.getKey("/Group"));
+  }
+  
   xobjs[xoname]=makeXObject(qsub->page.getOwningQPDF(),qsub->page); // trick: should be the same as page->getOwningQPDF() [only after it's made indirect]
 
   Matrix mtx;
@@ -324,9 +330,20 @@ void QPDF_PDFTOPDF_PageHandle::mirror() // {{{
     std::string xoname="/X"+QUtil::int_to_string(no);
 
     QPDFObjectHandle subpage=get();  // this->page, with rotation
+    
+    // Preserve /Group from the original page
+    QPDFObjectHandle group;
+    if (subpage.hasKey("/Group")) {
+      group = subpage.getKey("/Group");
+    }
 
     // replace all our data
     *this=QPDF_PDFTOPDF_PageHandle(subpage.getOwningQPDF(),orig.width,orig.height);
+    
+    // Apply /Group to the new wrapper page for performance
+    if (group.isInitialized()) {
+      page.replaceKey("/Group", group);
+    }
 
     xobjs[xoname]=makeXObject(subpage.getOwningQPDF(),subpage); // we can only now set this->xobjs
 
