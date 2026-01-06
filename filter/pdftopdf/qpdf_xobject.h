@@ -3,6 +3,6 @@
 
 #include <qpdf/QPDFObjectHandle.hh>
 
-QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page);
+QPDFObjectHandle makeXObject(QPDF *pdf,QPDFObjectHandle page,bool copyGroup=false);
 
 #endif
