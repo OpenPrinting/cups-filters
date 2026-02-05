@@ -50,7 +50,8 @@ jobs:
             automake \
             libtool \
             gettext \
-            autopoint
+            autopoint \
+            mupdf-tools
 
       - name: Generate configure script
         run: ./autogen.sh
