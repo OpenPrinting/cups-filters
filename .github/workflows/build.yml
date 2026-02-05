@@ -49,7 +49,8 @@ jobs:
             autoconf \
             automake \
             libtool \
-            gettext
+            gettext \
+            autopoint
 
       - name: Generate configure script
         run: ./autogen.sh
