@@ -1,0 +1,81 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [ master, 2.0.x ]
+  pull_request:
+    branches: [ master, 2.0.x ]
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'c-cpp' ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update build environment
+        run: sudo apt-get update --fix-missing -y
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get install -y \
+            libcups2-dev \
+            libcupsfilters-dev \
+            libppd-dev \
+            ghostscript \
+            liblcms2-dev \
+            libpoppler-cpp-dev \
+            libpng-dev \
+            libjpeg-dev \
+            libtiff5-dev \
+            zlib1g-dev \
+            libfontconfig1-dev \
+            libdbus-1-dev \
+            libexif-dev \
+            libavahi-common-dev \
+            libavahi-client-dev \
+            poppler-utils \
+            sharutils \
+            pkg-config \
+            autoconf \
+            automake \
+            libtool \
+            gettext \
+            autopoint \
+            mupdf-tools
+
+      - name: Generate configure script
+        run: ./autogen.sh
+
+      - name: Configure cups-filters
+        env:
+          CC: /usr/bin/gcc
+        run: ./configure
+
+      - name: Build cups-filters
+        run: make
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
