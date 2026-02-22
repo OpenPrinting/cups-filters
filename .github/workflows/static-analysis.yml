@@ -58,14 +58,6 @@ jobs:
       - name: Generate configure script
         run: ./autogen.sh
 
-      - name: Configure cups-filters
-        env:
-          CC: /usr/bin/gcc
-        run: ./configure
-
-      - name: Build cups-filters
-        run: make
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
