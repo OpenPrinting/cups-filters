@@ -1,0 +1,30 @@
+name: cppcheck
+
+on:
+  push:
+    branches:
+      - master
+      - 2.0.x
+  pull_request:
+    branches:
+      - master
+      - 2.0.x
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck
+        run: |
+          cppcheck \
+            --enable=warning,performance,portability \
+            --error-exitcode=1 \
+            --inline-suppr \
+            --suppress=missingIncludeSystem \
+            .
