@@ -27,4 +27,6 @@ jobs:
             --error-exitcode=1 \
             --inline-suppr \
             --suppress=missingIncludeSystem \
+            --suppress=unknownMacro \
+            -DVERSION="$(grep -oP 'AC_INIT\(\[[^\]]*\],\s*\[\K[^\]]*' configure.ac)" \
             .
