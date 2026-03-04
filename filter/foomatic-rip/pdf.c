@@ -43,7 +43,7 @@ pdf_count_pages(const char *filename)
 	   gspath, filename);
 
   FILE *pd = popen(gscommand, "r");
-  if (!pd)
+  if (pd == NULL)
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
 
