@@ -140,17 +140,26 @@ read_line(FILE *stream,
 	  size_t *readbytes)
 {
   char *line;
+  char *tmp;
   size_t alloc = 64, len = 0;
   int c;
 
   line = malloc(alloc);
+  if (!line)
+    return (NULL);
 
   while ((c = fgetc(stream)) != EOF)
   {
-    if (len >= alloc -1)
+    if (len >= alloc - 1)
     {
       alloc *= 2;
-      line = realloc(line, alloc);
+      tmp = realloc(line, alloc);
+      if (!tmp)
+      {
+        free(line);
+        return (NULL);
+      }
+      line = tmp;
     }
     line[len] = (char)c;
     len++;
