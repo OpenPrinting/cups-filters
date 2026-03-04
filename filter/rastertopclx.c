@@ -1377,8 +1377,8 @@ CompressData(unsigned char *line,	// I - Data to compress
 		// Pack 15-bit RGB difference...
 		//
 
-        	*comp_ptr++ = 0x80 | ((r << 2) & 0x7c) | ((g >> 3) & 0x03);
-		*comp_ptr++ = ((g << 5) & 0xe0) | (b & 0x1f);
+        	*comp_ptr++ = 0x80 | (((unsigned)r << 2) & 0x7c) | ((g >> 3) & 0x03);
+*comp_ptr++ = (((unsigned)g << 5) & 0xe0) | (b & 0x1f);
 	      }
 
               count --;
@@ -1547,8 +1547,8 @@ CompressData(unsigned char *line,	// I - Data to compress
 		// Pack 15-bit RGB difference...
 		//
 
-        	*comp_ptr++ = 0x80 | ((r << 2) & 0x7c) | ((g >> 3) & 0x03);
-		*comp_ptr++ = ((g << 5) & 0xe0) | (b & 0x1f);
+        	*comp_ptr++ = 0x80 | (((unsigned)r << 2) & 0x7c) | ((g >> 3) & 0x03);
+*comp_ptr++ = (((unsigned)g << 5) & 0xe0) | (b & 0x1f);
 	      }
 
               count --;
