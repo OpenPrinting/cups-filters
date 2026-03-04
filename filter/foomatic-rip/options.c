@@ -1778,6 +1778,7 @@ int
 optionset(const char *name)
 {
   int i;
+  char **tmp;
 
   for (i = 0; i < optionset_count; i ++)
   {
@@ -1788,7 +1789,10 @@ optionset(const char *name)
   if (optionset_count == optionset_alloc)
   {
     optionset_alloc *= 2;
-    optionsets = realloc(optionsets, optionset_alloc * sizeof(char *));
+    tmp = realloc(optionsets, optionset_alloc * sizeof(char *));
+    if (!tmp)
+      rip_die(EXIT_PRNERR, "Memory allocation failed for optionsets");
+    optionsets = tmp;
     for (i = optionset_count; i < optionset_alloc; i++)
       optionsets[i] = NULL;
   }
