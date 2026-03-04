@@ -457,6 +457,9 @@ fread_or_die(void* ptr,
 	     size_t count,
 	     FILE* stream)
 {
+  if (!stream)
+    rip_die(EXIT_PRNERR, "fread_or_die called with NULL stream");
+
   size_t res = fread(ptr, size, count, stream);
   if (ferror(stream))
     rip_die(EXIT_PRNERR, "Encountered error %s during fread", strerror(errno));
