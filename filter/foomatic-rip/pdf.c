@@ -43,7 +43,7 @@ pdf_count_pages(const char *filename)
 	   gspath, filename);
 
   FILE *pd = popen(gscommand, "r");
-  if (!pd)
+  if (pd == NULL)
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
 
@@ -146,7 +146,9 @@ pdf_extract_pages(char filename[PATH_MAX],
   FILE *pd = popen(gscommand, "r");
   if (!pd)
     rip_die(EXIT_STARVED, "Could not run ghostscript to extract the pages!\n");
-  pclose(pd);
+  
+  if (pclose(pd) != 0)
+    _log("Warning: ghostscript process exited with non-zero status\n");
 
   return (1);
 }

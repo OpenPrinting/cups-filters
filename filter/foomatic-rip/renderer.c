@@ -140,17 +140,26 @@ read_line(FILE *stream,
 	  size_t *readbytes)
 {
   char *line;
+  char *tmp;
   size_t alloc = 64, len = 0;
   int c;
 
   line = malloc(alloc);
+  if (!line)
+    return (NULL);
 
   while ((c = fgetc(stream)) != EOF)
   {
-    if (len >= alloc -1)
+    if (len >= alloc - 1)
     {
       alloc *= 2;
-      line = realloc(line, alloc);
+      tmp = realloc(line, alloc);
+      if (!tmp)
+      {
+        free(line);
+        return (NULL);
+      }
+      line = tmp;
     }
     line[len] = (char)c;
     len++;
@@ -181,7 +190,6 @@ write_binary_data(FILE *stream,
 // Read all lines containing 'jclstr' from 'stream' (actually, one more) and
 // return them in a zero terminated array.
 //
-
 static char **
 read_jcl_lines(FILE *stream,
 	       const char *jclstr,
@@ -189,17 +197,29 @@ read_jcl_lines(FILE *stream,
 {
   char *line;
   char **result;
+  char **tmp;
   size_t alloc = 8, cnt = 0;
 
   result = malloc(alloc * sizeof(char *));
+  if (!result)
+    return (NULL);
 
   // read from the renderer output until the first non-JCL line appears
   while ((line = read_line(stream, readbinarybytes)))
   {
-    if (cnt >= alloc -1)
+    if (cnt >= alloc - 1)
     {
       alloc *= 2;
-      result = realloc(result, alloc * sizeof(char *));
+      tmp = realloc(result, alloc * sizeof(char *));
+      if (!tmp)
+      {
+        // Free all previously allocated lines before freeing result array
+        for (size_t i = 0; i < cnt; i++)
+          free(result[i]);
+        free(result);
+        return (NULL);
+      }
+      result = tmp;
     }
     result[cnt] = line;
     if (!strstr(line, jclstr))
@@ -213,7 +233,6 @@ read_jcl_lines(FILE *stream,
   result[cnt] = NULL;
   return (result);
 }
-
 
 static int
 jcl_keywords_equal(const char *jclline1,
