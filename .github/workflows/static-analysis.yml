@@ -5,6 +5,7 @@ on:
     branches: [ master, 2.0.x ]
   pull_request:
     branches: [ master, 2.0.x ]
+  workflow_dispatch:
 
 jobs:
   analyze:
