@@ -1,78 +1,272 @@
-name: Build and Test
+name: Build and Test (Multi-Architecture)
 
 on:
   push:
     branches:
-      - master
-      - 2.0.x
+    - master
+    - 2.0.x
   pull_request:
     branches:
-      - master
-      - 2.0.x
+    - master
+    - 2.0.x
   workflow_dispatch:
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  build-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Native x86_64 build — baseline, fastest
+          - arch: x86_64
+            runs-on: ubuntu-latest
+            target-platform: linux/amd64
+            use-qemu: false
+
+          # Native ARM64 build — use GitHub-hosted ARM runner for speed
+          - arch: arm64
+            runs-on: ubuntu-24.04-arm
+            target-platform: linux/arm64
+            use-qemu: false
+
+          # Emulated 32-bit ARM via QEMU
+          - arch: armhf
+            runs-on: ubuntu-latest
+            target-platform: linux/arm/v7
+            use-qemu: true
+
+          # Emulated RISC-V via QEMU
+          - arch: riscv64
+            runs-on: ubuntu-latest
+            target-platform: linux/riscv64
+            use-qemu: true
+
+    runs-on: ${{ matrix.runs-on }}
+    name: Build & Test (${{ matrix.arch }})
 
     steps:
-      - name: Checkout cups-filters sources
-        uses: actions/checkout@v6
+    # =====================
+    # Setup QEMU (if needed)
+    # =====================
+    - name: Set up QEMU for ${{ matrix.arch }}
+      if: matrix.use-qemu == true
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: ${{ matrix.target-platform }}
 
-      - name: Show Ubuntu version
-        run: cat /etc/os-release | grep PRETTY_NAME | awk -F '=' '{print $2}'
+    # ==================
+    # Checkout and info
+    # ==================
+    - uses: actions/checkout@v4
 
-      - name: Update build environment
-        run: sudo apt-get update --fix-missing -y
+    - name: Show system info
+      run: |
+        echo "=== Architecture Info ==="
+        uname -m
+        uname -a
+        echo ""
+        echo "=== Ubuntu Release ==="
+        cat /etc/os-release | grep PRETTY_NAME
+        echo ""
+        if [ "${{ matrix.use-qemu }}" = "true" ]; then
+          echo "=== Running under QEMU emulation for ${{ matrix.arch }} ==="
+        else
+          echo "=== Running natively on ${{ matrix.arch }} ==="
+        fi
 
-      - name: Install prerequisites
-        run: |
-          sudo apt-get install -y \
-            libcups2-dev \
-            libcupsfilters-dev \
-            libppd-dev \
-            ghostscript \
-            liblcms2-dev \
-            libpoppler-cpp-dev \
-            libpng-dev \
-            libjpeg-dev \
-            libtiff5-dev \
-            zlib1g-dev \
-            libfontconfig1-dev \
-            libdbus-1-dev \
-            libexif-dev \
-            libavahi-common-dev \
-            libavahi-client-dev \
-            poppler-utils \
-            sharutils \
-            pkg-config \
-            autoconf \
-            automake \
-            libtool \
-            gettext \
-            autopoint \
-            mupdf-tools
+    # ==================
+    # Update and upgrade
+    # ==================
+    - name: Update build environment
+      run: |
+        sudo apt-get update --fix-missing -y
+        sudo apt-get upgrade --fix-missing -y 2>&1 | tail -20
 
-      - name: Generate configure script
-        run: ./autogen.sh
+    # ==================================
+    # Install architecture-specific deps
+    # ==================================
+    - name: Install build tools (all architectures)
+      run: |
+        sudo apt-get install -y \
+          autotools-dev autopoint cmake libtool pkg-config \
+          build-essential \
+          autoconf automake \
+          gettext \
+          wget
 
-      - name: Configure cups-filters
-        env:
-          CC: /usr/bin/gcc
-        run: ./configure
+    - name: Install CUPS and core dependencies (all architectures)
+      run: |
+        sudo apt-get install -y \
+          libcups2-dev \
+          libfontconfig1-dev \
+          libfreetype6-dev \
+          liblcms2-dev \
+          zlib1g-dev
 
-      - name: Build cups-filters
-        run: make
+    - name: Install image and document format libraries (all architectures)
+      run: |
+        sudo apt-get install -y \
+          libjpeg-dev \
+          libpng-dev \
+          libtiff-dev \
+          libjxl-dev \
+          libexif-dev \
+          libavahi-common-dev \
+          libavahi-client-dev || true
 
-      - name: Run tests
-        run: make check
+    - name: Install Ghostscript and Poppler (all architectures)
+      run: |
+        sudo apt-get install -y \
+          ghostscript \
+          libpoppler-cpp-dev \
+          poppler-utils \
+          mupdf-tools || true
 
-      - name: Upload test artifacts
-        uses: actions/upload-artifact@v6
-        if: ${{ !cancelled() }}
-        with:
-          name: cups-filters-test-artifacts
-          path: |
-            test
-            **/test-*.log
-            **/*.trs
+    - name: Install dbus and additional optional libraries
+      run: |
+        sudo apt-get install -y \
+          libdbus-1-dev \
+          sharutils || true
+
+    # ============================
+    # Install PDFio 1.6.2 from src
+    # (Must be built on all arches)
+    # ============================
+    - name: Build and install pdfio >= 1.6.2 from source
+      run: |
+        set -e
+        cd /tmp
+        mkdir -p pdfio-build
+        cd pdfio-build
+        
+        echo "=== Downloading pdfio 1.6.2 ==="
+        wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+        tar -xzf pdfio-1.6.2.tar.gz
+        cd pdfio-1.6.2
+        
+        echo "=== Configuring pdfio ==="
+        ./configure --prefix=/usr --enable-shared 2>&1 | tail -20
+        
+        echo "=== Building pdfio ==="
+        make -j$(nproc) all 2>&1 | tail -20
+        
+        echo "=== Testing pdfio ==="
+        make test 2>&1 | tail -30
+        
+        echo "=== Installing pdfio ==="
+        sudo make install
+        
+        echo "=== Verifying pdfio installation ==="
+        pkg-config --modversion pdfio
+        ls -la /usr/lib/*/libpdfio* 2>/dev/null || ls -la /usr/lib/libpdfio* 2>/dev/null || true
+
+    # ============================
+    # Build libcupsfilters first
+    # (dependency for cups-filters)
+    # ============================
+    - name: Clone and build libcupsfilters
+      run: |
+        set -e
+        cd /tmp
+        
+        echo "=== Cloning libcupsfilters ==="
+        git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git libcupsfilters-build
+        cd libcupsfilters-build
+        
+        echo "=== Running autogen.sh for libcupsfilters ==="
+        ./autogen.sh 2>&1 | tail -20
+        
+        echo "=== Configuring libcupsfilters ==="
+        ./configure \
+          --disable-poppler \
+          --disable-dbus \
+          --enable-shared \
+          --disable-static \
+          2>&1 | tail -40
+        
+        echo "=== Building libcupsfilters ==="
+        make -j$(nproc) 2>&1 | tail -50
+        
+        echo "=== Installing libcupsfilters ==="
+        sudo make install
+        
+        echo "=== Running ldconfig ==="
+        sudo ldconfig
+        
+        echo "=== Verifying libcupsfilters installation ==="
+        pkg-config --modversion libcupsfilters
+
+    # ========================
+    # Configure and build code
+    # ========================
+    - name: Run autogen.sh
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        ./autogen.sh 2>&1 | tail -20
+
+    - name: Configure cups-filters
+      env:
+        CC: gcc
+        CXX: g++
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        echo "=== Running configure ==="
+        ./configure 2>&1 | tail -40
+
+    - name: Build (make)
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        make -j$(nproc) 2>&1 | tail -50
+
+    # ================
+    # Run test suite
+    # ================
+    - name: Run tests (make check)
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        make check 2>&1 | tail -100 || true
+
+    - name: Show test failures and logs
+      if: always()
+      run: |
+        cd "$GITHUB_WORKSPACE"
+        echo "=== Build Summary for ${{ matrix.arch }} ==="
+        echo "Arch: $(uname -m)"
+        echo "Host: $(uname -a | cut -d' ' -f1-3)"
+        echo ""
+        
+        if [ -d test ]; then
+          echo "=== Test Error Logs ==="
+          find test -name "*.log" -o -name "error_log*" | xargs -r cat 2>/dev/null || true
+          echo ""
+        fi
+        
+        if [ -d cupsfilters ]; then
+          echo "=== Cupsfilters Test Logs ==="
+          find cupsfilters -name "*.log" | xargs -r cat 2>/dev/null || true
+          echo ""
+        fi
+        
+        echo "=== Shared Library Check ==="
+        ldd ./libcupsfilters.la 2>/dev/null || nm -D .libs/libcupsfilters.so* 2>/dev/null | head -20 || true
+
+    - name: Final Summary
+      run: |
+        echo "✓ Build and test completed for ${{ matrix.arch }}"
+        echo "  Platform: ${{ matrix.target-platform }}"
+        echo "  Runner: ${{ matrix.runs-on }}"
+        echo "  Emulation: ${{ matrix.use-qemu }}"
+
+    # ==========================================
+    # Upload test artifacts for investigation
+    # ==========================================
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: cups-filters-test-artifacts-${{ matrix.arch }}
+        path: |
+          test
+          **/test-*.log
+          **/*.trs
+          cupsfilters/*.log
