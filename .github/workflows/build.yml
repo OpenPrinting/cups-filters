@@ -1,139 +1,193 @@
-# Multi-Architecture Build and Test Workflow for cups-filters
-name: Build and Test (Multi-Architecture)
+name: Multi-Architecture CI Build & Test
 
 on:
   push:
-    branches: [master, 2.0.x]
+    branches: [ '**' ]
   pull_request:
-    branches: [master, 2.0.x]
+    branches: [ '**' ]
   workflow_dispatch:
 
 jobs:
-  build-matrix:
+  build:
+    name: Build & Test (${{ matrix.arch }})
+    runs-on: ${{ matrix.runs-on }}
+    
     strategy:
       fail-fast: false
       matrix:
         include:
-          # 1. Native x86_64
           - arch: x86_64
-            name: x86_64
             runs-on: ubuntu-latest
             use-qemu: false
-
-          # 2. Native ARM64
           - arch: arm64
-            name: arm64
             runs-on: ubuntu-24.04-arm
             use-qemu: false
-
-          # 3. Emulated 32-bit ARM (Internal ID armv7 = armhf)
           - arch: armv7
-            name: armhf
             runs-on: ubuntu-latest
             use-qemu: true
-            distro: ubuntu22.04
-
-          # 4. Emulated RISC-V
+            qemu-arch: armv7
           - arch: riscv64
-            name: riscv64
             runs-on: ubuntu-latest
             use-qemu: true
-            distro: ubuntu22.04
-
-    runs-on: ${{ matrix.runs-on }}
-    name: Build & Test (${{ matrix.name }})
+            qemu-arch: riscv64
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # ==========================================
-      # 1. NATIVE EXECUTION (x86_64 and arm64)
-      # ==========================================
-      - name: Install Dependencies (Native)
+      - name: Save workspace directory
+        run: |
+          echo "REPO_DIR=$(pwd)" >> $GITHUB_ENV
+
+      # ========================================================================
+      # NATIVE BUILD (x86_64 and arm64)
+      # ========================================================================
+      - name: Install build dependencies (native)
         if: matrix.use-qemu == false
         run: |
-          sudo apt-get update --fix-missing -y
-          # Remove system versions to ensure we test against our local build stack
+          sudo apt-get update
+          # Remove conflicting system packages
           sudo apt-get remove -y libcupsfilters-dev libppd-dev || true
           sudo apt-get install -y \
-            libcups2-dev ghostscript liblcms2-dev libpoppler-cpp-dev libpng-dev \
-            libjpeg-dev libtiff-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
-            libexif-dev libavahi-common-dev libavahi-client-dev poppler-utils \
-            sharutils pkg-config autoconf automake libtool gettext autopoint mupdf-tools
+            build-essential \
+            gcc g++ cmake autoconf automake libtool pkg-config \
+            libcups2-dev libcupsimage2-dev libqpdf-dev \
+            libpoppler-dev libpoppler-cpp-dev libpng-dev \
+            libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
+            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools
 
-      - name: Build Stack and cups-filters (Native)
+      - name: Build pdfio, libcupsfilters, and libppd (native)
         if: matrix.use-qemu == false
         run: |
-          # Build pdfio
-          cd /tmp && wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
-          tar -xzf pdfio-1.6.2.tar.gz && cd pdfio-1.6.2 && ./configure --prefix=/usr && make && sudo make install
+          set -ex
           
-          # Build libcupsfilters (Version 2.x)
-          cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
-          cd libcupsfilters && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install
-          
-          # Build libppd
-          cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libppd.git
-          cd libppd && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install
-          
-          # Build and Test cups-filters
-          cd "$GITHUB_WORKSPACE"
-          ./autogen.sh && ./configure --prefix=/usr
+          # Clone and build pdfio (v1.6.2)
+          cd /tmp
+          wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+          tar -xzf pdfio-1.6.2.tar.gz
+          cd pdfio-1.6.2
+          ./configure --prefix=/usr --enable-shared
+          make all
+          sudo make install
+          sudo ldconfig
+
+          # Clone and build libcupsfilters
+          cd /tmp
+          git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
+          cd libcupsfilters
+          ./autogen.sh
+          ./configure --prefix=/usr
           make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+          # Clone and build libppd
+          cd /tmp
+          git clone --depth 1 https://github.com/OpenPrinting/libppd.git
+          cd libppd
+          ./autogen.sh
+          ./configure --prefix=/usr
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build cups-filters (native)
+        if: matrix.use-qemu == false
+        run: |
+          set -ex
+          cd "$REPO_DIR"
+          ./autogen.sh
+          ./configure --prefix=/usr
+          make -j$(nproc) V=1
+
+      - name: Run test suite (native)
+        if: matrix.use-qemu == false
+        run: |
+          set -ex
+          cd "$REPO_DIR"
           make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
-      - name: Upload artifacts (Native)
-        if: matrix.use-qemu == false && always()
-        uses: actions/upload-artifact@v4
+      # ========================================================================
+      # EMULATED BUILD (armv7 and riscv64)
+      # ========================================================================
+      - name: Set up QEMU for emulation
+        if: matrix.use-qemu == true
+        uses: docker/setup-qemu-action@v3
         with:
-          name: cups-filters-artifacts-${{ matrix.name }}
-          path: |
-            test-suite.log
-            **/*.log
-            **/test-suite.log
+          platforms: ${{ matrix.qemu-arch }}
 
-      # ==========================================
-      # 2. EMULATED EXECUTION (armhf and riscv64)
-      # ==========================================
-      - name: Build and Test (Emulated)
+      - name: Build and test on emulated architecture
         if: matrix.use-qemu == true
         uses: uraimo/run-on-arch-action@v3
         with:
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
+          arch: ${{ matrix.qemu-arch }}
+          distro: ubuntu24.04
+          dockerRunArgs: |
+            --volume "${{ github.workspace }}:/workspace"
           install: |
-            apt-get update -y
-            apt-get install -y git wget build-essential libcups2-dev ghostscript liblcms2-dev \
-              libpoppler-cpp-dev libpng-dev libjpeg-dev libtiff-dev zlib1g-dev \
-              libfontconfig1-dev libdbus-1-dev libexif-dev libavahi-common-dev \
-              libavahi-client-dev poppler-utils sharutils pkg-config autoconf \
-              automake libtool gettext autopoint mupdf-tools
+            apt-get update
+            DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+            # Remove conflicting system packages
+            apt-get remove -y libcupsfilters-dev libppd-dev 2>/dev/null || true
+            apt-get install -y \
+              build-essential \
+              gcc g++ cmake autoconf automake libtool pkg-config \
+              libcups2-dev libcupsimage2-dev libqpdf-dev \
+              libpoppler-dev libpoppler-cpp-dev libpng-dev \
+              libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
+              ghostscript poppler-utils git curl wget tar mupdf-tools
           run: |
-            # Build pdfio
-            cd /tmp && wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
-            tar -xzf pdfio-1.6.2.tar.gz && cd pdfio-1.6.2 && ./configure --prefix=/usr && make && make install
-            
-            # Build libcupsfilters
-            cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
-            cd libcupsfilters && ./autogen.sh && ./configure --prefix=/usr && make && make install
-            
-            # Build libppd
-            cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libppd.git
-            cd libppd && ./autogen.sh && ./configure --prefix=/usr && make && make install
-            
-            # Build and Test cups-filters
-            cd $(pwd)
-            ./autogen.sh && ./configure --prefix=/usr
+            set -ex
+            export REPO_DIR="/workspace"
+
+            # Build pdfio (v1.6.2)
+            cd /tmp
+            wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+            tar -xzf pdfio-1.6.2.tar.gz
+            cd pdfio-1.6.2
+            ./configure --prefix=/usr --enable-shared
+            make all
+            make install
+            ldconfig
+
+            # Clone and build libcupsfilters
+            cd /tmp
+            git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
+            cd libcupsfilters
+            ./autogen.sh
+            ./configure --prefix=/usr
             make -j$(nproc)
+            make install
+            ldconfig
+
+            # Clone and build libppd
+            cd /tmp
+            git clone --depth 1 https://github.com/OpenPrinting/libppd.git
+            cd libppd
+            ./autogen.sh
+            ./configure --prefix=/usr
+            make -j$(nproc)
+            make install
+            ldconfig
+
+            # CRITICAL: Return to workspace (not pwd, which would be /tmp/libppd)
+            cd "$REPO_DIR"
+            ./autogen.sh
+            ./configure --prefix=/usr
+            make -j$(nproc) V=1
+
+            # Run test suite with strict error handling
             make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
-      - name: Upload artifacts (Emulated)
-        if: matrix.use-qemu == true && always()
+      # ========================================================================
+      # ARTIFACT COLLECTION (both native and emulated)
+      # ========================================================================
+      - name: Upload test logs on failure
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cups-filters-artifacts-${{ matrix.name }}
+          name: test-logs-${{ matrix.arch }}
           path: |
             test-suite.log
             **/*.log
-            **/test-suite.log
-          continue-on-error: true
+          if-no-files-found: ignore
