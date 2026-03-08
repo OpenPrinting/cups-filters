@@ -1,3 +1,4 @@
+# Multi-Architecture Build and Test Workflow for cups-filters
 name: Build and Test (Multi-Architecture)
 
 on:
@@ -17,90 +18,111 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Native x86_64
           - arch: x86_64
+            name: x86_64
             runs-on: ubuntu-latest
             use-qemu: false
 
+          # Native ARM64
           - arch: arm64
+            name: arm64
             runs-on: ubuntu-24.04-arm
             use-qemu: false
 
-          - arch: armhf
+          # Emulated 32-bit ARM (Uses debian_bullseye for compatibility)
+          - arch: armv7
+            name: armhf
             runs-on: ubuntu-latest
             use-qemu: true
+            distro: debian_bullseye
 
+          # Emulated RISC-V (Uses ubuntu22.04 for compatibility)
           - arch: riscv64
+            name: riscv64
             runs-on: ubuntu-latest
             use-qemu: true
+            distro: ubuntu22.04
 
     runs-on: ${{ matrix.runs-on }}
-    name: Build & Test (${{ matrix.arch }})
+    name: Build & Test (${{ matrix.name }})
 
     steps:
-      - name: Set up QEMU for ${{ matrix.arch }}
-        if: matrix.use-qemu == true
-        uses: docker/setup-qemu-action@v3
-
       - name: Checkout cups-filters sources
         uses: actions/checkout@v4
 
-      - name: Show system info
+      # ==========================================
+      # 1. NATIVE EXECUTION (x86_64 and arm64)
+      # ==========================================
+      - name: Install Dependencies (Native)
+        if: matrix.use-qemu == false
         run: |
-          echo "=== Architecture: $(uname -m) ==="
-          cat /etc/os-release | grep PRETTY_NAME | awk -F '=' '{print $2}'
-          echo "QEMU: ${{ matrix.use-qemu }}"
-
-      - name: Update build environment
-        run: sudo apt-get update --fix-missing -y
-
-      - name: Install prerequisites
-        run: |
+          sudo apt-get update --fix-missing -y
           sudo apt-get install -y \
-            libcups2-dev \
-            libcupsfilters-dev \
-            libppd-dev \
-            ghostscript \
-            liblcms2-dev \
-            libpoppler-cpp-dev \
-            libpng-dev \
-            libjpeg-dev \
-            libtiff5-dev \
-            zlib1g-dev \
-            libfontconfig1-dev \
-            libdbus-1-dev \
-            libexif-dev \
-            libavahi-common-dev \
-            libavahi-client-dev \
-            poppler-utils \
-            sharutils \
-            pkg-config \
-            autoconf \
-            automake \
-            libtool \
-            gettext \
-            autopoint \
-            mupdf-tools
+            libcups2-dev libcupsfilters-dev libppd-dev ghostscript \
+            liblcms2-dev libpoppler-cpp-dev libpng-dev libjpeg-dev \
+            libtiff5-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
+            libexif-dev libavahi-common-dev libavahi-client-dev \
+            poppler-utils sharutils pkg-config autoconf automake \
+            libtool gettext autopoint mupdf-tools
 
-      - name: Generate configure script
-        run: ./autogen.sh
-
-      - name: Configure cups-filters
+      - name: Build and Test cups-filters (Native)
+        if: matrix.use-qemu == false
         env:
           CC: /usr/bin/gcc
-        run: ./configure
+        run: |
+          ./autogen.sh
+          ./configure
+          make -j$(nproc)
+          make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
-      - name: Build cups-filters
-        run: make
-
-      - name: Run tests
-        run: make check
-
-      - name: Upload test artifacts
+      - name: Upload test artifacts (Native)
+        if: matrix.use-qemu == false && always()
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
         with:
-          name: cups-filters-test-artifacts-${{ matrix.arch }}
+          name: cups-filters-test-artifacts-${{ matrix.name }}
           path: |
-            test
-            **/test-*.log
-            **/*.trs
+            test-suite.log
+            **/*.log
+            **/test-suite.log
+          if-no-files-found: warn
+
+      # ==========================================
+      # 2. EMULATED EXECUTION (armhf and riscv64)
+      # ==========================================
+      - name: Build and Test (Emulated)
+        if: matrix.use-qemu == true
+        uses: uraimo/run-on-arch-action@v3
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+          install: |
+            apt-get update --fix-missing -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+            apt-get install -y \
+              libcups2-dev libcupsfilters-dev libppd-dev ghostscript \
+              liblcms2-dev libpoppler-cpp-dev libpng-dev libjpeg-dev \
+              libtiff5-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
+              libexif-dev libavahi-common-dev libavahi-client-dev \
+              poppler-utils sharutils pkg-config autoconf automake \
+              libtool gettext autopoint mupdf-tools
+          run: |
+            export CC=/usr/bin/gcc
+            ./autogen.sh
+            ./configure
+            make -j$(nproc)
+            
+            # Using XFAIL if specific emulator tests fail due to memory constraints
+            make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
+
+      - name: Upload test artifacts (Emulated)
+        if: matrix.use-qemu == true && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cups-filters-test-artifacts-${{ matrix.name }}
+          path: |
+            test-suite.log
+            **/*.log
+            **/test-suite.log
+          if-no-files-found: warn
+          continue-on-error: true
