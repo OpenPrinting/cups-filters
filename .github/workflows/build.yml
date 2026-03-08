@@ -48,14 +48,16 @@ jobs:
           sudo apt-get update
           # Remove conflicting system packages
           sudo apt-get remove -y libcupsfilters-dev libppd-dev || true
+          # Install comprehensive OpenPrinting dependency stack
           sudo apt-get install -y \
-            build-essential \
-            gcc g++ cmake autoconf automake libtool pkg-config \
+            build-essential gcc g++ cmake autoconf automake libtool pkg-config \
             libcups2-dev libcupsimage2-dev libqpdf-dev \
             libpoppler-dev libpoppler-cpp-dev libpng-dev \
             libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
             ghostscript poppler-utils tzdata git curl wget tar mupdf-tools \
-            autopoint gettext
+            autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
+            libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
+            zlib1g-dev
 
       - name: Build pdfio, libcupsfilters, and libppd (native)
         if: matrix.use-qemu == false
@@ -130,14 +132,16 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
             # Remove conflicting system packages
             apt-get remove -y libcupsfilters-dev libppd-dev 2>/dev/null || true
+            # Install comprehensive OpenPrinting dependency stack
             apt-get install -y \
-              build-essential \
-              gcc g++ cmake autoconf automake libtool pkg-config \
+              build-essential gcc g++ cmake autoconf automake libtool pkg-config \
               libcups2-dev libcupsimage2-dev libqpdf-dev \
               libpoppler-dev libpoppler-cpp-dev libpng-dev \
               libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
               ghostscript poppler-utils git curl wget tar mupdf-tools \
-              autopoint gettext
+              autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
+              libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
+              zlib1g-dev
           run: |
             set -ex
             export REPO_DIR="/workspace"
