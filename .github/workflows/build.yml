@@ -54,7 +54,8 @@ jobs:
             libcups2-dev libcupsimage2-dev libqpdf-dev \
             libpoppler-dev libpoppler-cpp-dev libpng-dev \
             libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools
+            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools \
+            autopoint gettext
 
       - name: Build pdfio, libcupsfilters, and libppd (native)
         if: matrix.use-qemu == false
@@ -135,7 +136,8 @@ jobs:
               libcups2-dev libcupsimage2-dev libqpdf-dev \
               libpoppler-dev libpoppler-cpp-dev libpng-dev \
               libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-              ghostscript poppler-utils git curl wget tar mupdf-tools
+              ghostscript poppler-utils git curl wget tar mupdf-tools \
+              autopoint gettext
           run: |
             set -ex
             export REPO_DIR="/workspace"
