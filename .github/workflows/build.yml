@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Native x86_64
+          # 1. Native x86_64
           - arch: x86_64
             name: x86_64
             runs-on: ubuntu-latest
