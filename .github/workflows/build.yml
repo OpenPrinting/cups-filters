@@ -3,13 +3,9 @@ name: Build and Test (Multi-Architecture)
 
 on:
   push:
-    branches:
-      - master
-      - 2.0.x
+    branches: [master, 2.0.x]
   pull_request:
-    branches:
-      - master
-      - 2.0.x
+    branches: [master, 2.0.x]
   workflow_dispatch:
 
 jobs:
@@ -18,26 +14,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Native x86_64
+          # 1. Native x86_64
           - arch: x86_64
             name: x86_64
             runs-on: ubuntu-latest
             use-qemu: false
 
-          # Native ARM64
+          # 2. Native ARM64
           - arch: arm64
             name: arm64
             runs-on: ubuntu-24.04-arm
             use-qemu: false
 
-          # Emulated 32-bit ARM (Uses debian_bullseye for compatibility)
+          # 3. Emulated 32-bit ARM (Internal ID armv7 = armhf)
           - arch: armv7
             name: armhf
             runs-on: ubuntu-latest
             use-qemu: true
-            distro: debian_bullseye
+            distro: ubuntu22.04
 
-          # Emulated RISC-V (Uses ubuntu22.04 for compatibility)
+          # 4. Emulated RISC-V
           - arch: riscv64
             name: riscv64
             runs-on: ubuntu-latest
@@ -48,8 +44,7 @@ jobs:
     name: Build & Test (${{ matrix.name }})
 
     steps:
-      - name: Checkout cups-filters sources
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       # ==========================================
       # 1. NATIVE EXECUTION (x86_64 and arm64)
@@ -58,34 +53,44 @@ jobs:
         if: matrix.use-qemu == false
         run: |
           sudo apt-get update --fix-missing -y
+          # Remove system versions to ensure we test against our local build stack
+          sudo apt-get remove -y libcupsfilters-dev libppd-dev || true
           sudo apt-get install -y \
-            libcups2-dev libcupsfilters-dev libppd-dev ghostscript \
-            liblcms2-dev libpoppler-cpp-dev libpng-dev libjpeg-dev \
-            libtiff5-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
-            libexif-dev libavahi-common-dev libavahi-client-dev \
-            poppler-utils sharutils pkg-config autoconf automake \
-            libtool gettext autopoint mupdf-tools
+            libcups2-dev ghostscript liblcms2-dev libpoppler-cpp-dev libpng-dev \
+            libjpeg-dev libtiff-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
+            libexif-dev libavahi-common-dev libavahi-client-dev poppler-utils \
+            sharutils pkg-config autoconf automake libtool gettext autopoint mupdf-tools
 
-      - name: Build and Test cups-filters (Native)
+      - name: Build Stack and cups-filters (Native)
         if: matrix.use-qemu == false
-        env:
-          CC: /usr/bin/gcc
         run: |
-          ./autogen.sh
-          ./configure
+          # Build pdfio
+          cd /tmp && wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+          tar -xzf pdfio-1.6.2.tar.gz && cd pdfio-1.6.2 && ./configure --prefix=/usr && make && sudo make install
+          
+          # Build libcupsfilters (Version 2.x)
+          cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
+          cd libcupsfilters && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install
+          
+          # Build libppd
+          cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libppd.git
+          cd libppd && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install
+          
+          # Build and Test cups-filters
+          cd "$GITHUB_WORKSPACE"
+          ./autogen.sh && ./configure --prefix=/usr
           make -j$(nproc)
           make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
-      - name: Upload test artifacts (Native)
+      - name: Upload artifacts (Native)
         if: matrix.use-qemu == false && always()
         uses: actions/upload-artifact@v4
         with:
-          name: cups-filters-test-artifacts-${{ matrix.name }}
+          name: cups-filters-artifacts-${{ matrix.name }}
           path: |
             test-suite.log
             **/*.log
             **/test-suite.log
-          if-no-files-found: warn
 
       # ==========================================
       # 2. EMULATED EXECUTION (armhf and riscv64)
@@ -97,32 +102,38 @@ jobs:
           arch: ${{ matrix.arch }}
           distro: ${{ matrix.distro }}
           install: |
-            apt-get update --fix-missing -y
-            DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-            apt-get install -y \
-              libcups2-dev libcupsfilters-dev libppd-dev ghostscript \
-              liblcms2-dev libpoppler-cpp-dev libpng-dev libjpeg-dev \
-              libtiff5-dev zlib1g-dev libfontconfig1-dev libdbus-1-dev \
-              libexif-dev libavahi-common-dev libavahi-client-dev \
-              poppler-utils sharutils pkg-config autoconf automake \
-              libtool gettext autopoint mupdf-tools
+            apt-get update -y
+            apt-get install -y git wget build-essential libcups2-dev ghostscript liblcms2-dev \
+              libpoppler-cpp-dev libpng-dev libjpeg-dev libtiff-dev zlib1g-dev \
+              libfontconfig1-dev libdbus-1-dev libexif-dev libavahi-common-dev \
+              libavahi-client-dev poppler-utils sharutils pkg-config autoconf \
+              automake libtool gettext autopoint mupdf-tools
           run: |
-            export CC=/usr/bin/gcc
-            ./autogen.sh
-            ./configure
-            make -j$(nproc)
+            # Build pdfio
+            cd /tmp && wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+            tar -xzf pdfio-1.6.2.tar.gz && cd pdfio-1.6.2 && ./configure --prefix=/usr && make && make install
             
-            # Using XFAIL if specific emulator tests fail due to memory constraints
+            # Build libcupsfilters
+            cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
+            cd libcupsfilters && ./autogen.sh && ./configure --prefix=/usr && make && make install
+            
+            # Build libppd
+            cd /tmp && git clone --depth 1 https://github.com/OpenPrinting/libppd.git
+            cd libppd && ./autogen.sh && ./configure --prefix=/usr && make && make install
+            
+            # Build and Test cups-filters
+            cd $(pwd)
+            ./autogen.sh && ./configure --prefix=/usr
+            make -j$(nproc)
             make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
-      - name: Upload test artifacts (Emulated)
+      - name: Upload artifacts (Emulated)
         if: matrix.use-qemu == true && always()
         uses: actions/upload-artifact@v4
         with:
-          name: cups-filters-test-artifacts-${{ matrix.name }}
+          name: cups-filters-artifacts-${{ matrix.name }}
           path: |
             test-suite.log
             **/*.log
             **/test-suite.log
-          if-no-files-found: warn
           continue-on-error: true
