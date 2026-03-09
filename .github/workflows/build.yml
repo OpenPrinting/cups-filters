@@ -45,7 +45,9 @@ jobs:
       - name: Install build dependencies (native)
         if: matrix.use-qemu == false
         run: |
-          sudo apt-get update
+          # Add retries to prevent transient Ubuntu mirror sync failures
+          sudo apt-get clean
+          sudo apt-get update -o Acquire::Retries=3
           # Remove conflicting system packages
           sudo apt-get remove -y libcupsfilters-dev libppd-dev || true
           # Install comprehensive OpenPrinting dependency stack
@@ -128,7 +130,10 @@ jobs:
           dockerRunArgs: |
             --volume "${{ github.workspace }}:/workspace"
           install: |
-            apt-get update
+            # Add retries to prevent transient Ubuntu mirror sync failures
+            apt-get clean
+            apt-get update -o Acquire::Retries=3
+            
             DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
             # Remove conflicting system packages
             apt-get remove -y libcupsfilters-dev libppd-dev 2>/dev/null || true
