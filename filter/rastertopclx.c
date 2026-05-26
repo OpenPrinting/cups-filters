@@ -925,7 +925,9 @@ Shutdown(ppd_file_t         *ppd,	// I - PPD file
     //
 
     putchar(0x1b);
-    printf(attr->value, Page);
+    // EndJob comes from the PPD, so only restricted page-count formatting
+    // is allowed here.
+    pcl_write(attr->value, Page);
   }
   else
   {
