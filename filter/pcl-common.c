@@ -10,6 +10,8 @@
 // Contents:
 //
 //   pcl_set_media_size() - Set media size using the page size command.
+//   pcl_write()          - Write a PCL command string, performing safe
+//                          page-count substitutions as needed.
 //   pjl_write()          - Write a PJL command string, performing
 //                          substitutions as needed.
 //
@@ -22,6 +24,7 @@
 #include <ppd/ppd.h>
 #include <ppd/ppd-filter.h>
 #include "pcl-common.h"
+#include <ctype.h>
 #include <math.h>
 
 
@@ -189,6 +192,92 @@ pcl_set_media_size(ppd_file_t *ppd,	// I - PPD file
 
   printf("\033&l0L");			// Turn off perforation skip
   printf("\033&l0E");			// Reset top margin to 0
+}
+
+
+//
+// 'pcl_write()' - Write a PCL command string, performing safe page-count
+//                 substitutions as needed.
+//
+
+void
+pcl_write(const char *format,		// I - Format string
+          int        page_count)	// I - Page count
+{
+  const char	*spec;			// Start of format specifier
+  int		width;			// Field width
+  int		zero_pad;		// Zero-pad output?
+  int		have_width;		// Width was specified?
+
+
+  if (!format)
+    return;
+
+  while (*format)
+  {
+    if (*format != '%')
+    {
+      putchar(*format++);
+      continue;
+    }
+
+    format ++;
+
+    if (!*format)
+    {
+      putchar('%');
+      break;
+    }
+
+    if (*format == '%')
+    {
+      putchar('%');
+      format ++;
+      continue;
+    }
+
+    spec = format;
+    width = 0;
+    zero_pad = 0;
+    have_width = 0;
+
+    if (*format == '0')
+    {
+      zero_pad = 1;
+      format ++;
+    }
+
+    while (isdigit((unsigned char)*format))
+    {
+      have_width = 1;
+      width = width * 10 + (*format - '0');
+      format ++;
+    }
+
+    // Only integer page-count substitutions are supported here. Emit any
+    // other format sequence literally instead of interpreting PPD data as a
+    // general printf format string.
+    if (*format == 'd' || *format == 'i' || *format == 'u')
+    {
+      if (zero_pad && have_width)
+        printf("%0*d", width, page_count);
+      else if (have_width)
+        printf("%*d", width, page_count);
+      else
+        printf("%d", page_count);
+
+      format ++;
+      continue;
+    }
+
+    putchar('%');
+
+    while (spec < format)
+      putchar(*spec++);
+
+    if (*format)
+      putchar(*format++);
+  }
 }
 
 
