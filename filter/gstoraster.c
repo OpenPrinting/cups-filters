@@ -71,8 +71,47 @@ typedef enum
   HALFTONE_FOO2ZJS,
   HALFTONE_BI_LEVEL,
   HALFTONE_DITHERING,
-  HALFTONE_GENORDERED
+  HALFTONE_GENORDERED,
+  HALFTONE_SPOT
 } cups_halftone_type_t;
+
+static const char *ht_spot_functions[] = {
+  "{dup mul exch dup mul add 1 exch sub}",         /* 0  SimpleDot */
+  "{dup mul exch dup mul add 1 sub}",              /* 1  InvertedSimpleDot */
+  "{360 mul sin 2 div exch 360 mul sin 2 div add}",/* 2  DoubleDot */
+  "{360 mul sin 2 div exch 360 mul sin 2 div add neg}",/* 3 InvertedDoubleDot */
+  "{180 mul cos exch 180 mul cos add 2 div}",      /* 4  CosineDot */
+  "{360 mul sin 2 div exch 2 div 360 mul sin 2 div add}",    /* 5  Double */
+  "{360 mul sin 2 div exch 2 div 360 mul sin 2 div add neg}",/* 6  InvertedDouble */
+  "{exch pop abs neg}",                            /* 7  Line */
+  "{pop}",                                         /* 8  LineX */
+  "{exch pop}",                                    /* 9  LineY */
+  "{abs exch abs 2 copy add 1.0 le"
+  " {dup mul exch dup mul add 1 exch sub}"
+  " {1 sub dup mul exch 1 sub dup mul add 1 sub}"
+  " ifelse}",                                      /* 10 Round */
+  "{abs exch abs 2 copy 3 mul exch 4 mul add 3 sub dup 0 lt"
+  " {pop dup mul exch 0.75 div dup mul add 4 div 1 exch sub}"
+  " {dup 1 gt"
+  " {pop 1 exch sub dup mul exch 1 exch sub 0.75 div dup mul add 4 div 1 sub}"
+  " {0.5 exch sub exch pop exch pop}}"
+  " ifelse}ifelse}",                               /* 11 Ellipse */
+  "{dup mul 0.9 mul exch dup mul add 1 exch sub}", /* 12 EllipseA */
+  "{dup mul 0.9 mul exch dup mul add 1 sub}",      /* 13 InvertedEllipseA */
+  "{dup 5 mul 8 div mul exch dup mul exch add sqrt 1 exch sub}", /* 14 EllipseB */
+  "{dup mul exch dup mul 0.9 mul add 1 exch sub}", /* 15 EllipseC */
+  "{dup mul exch dup mul 0.9 mul add 1 sub}",      /* 16 InvertedEllipseC */
+  "{abs exch abs 2 copy lt {exch} if pop neg}",    /* 17 Square */
+  "{abs exch abs 2 copy gt {exch} if pop neg}",    /* 18 Cross */
+  "{abs exch abs 0.9 mul add 2 div}",              /* 19 Rhomboid */
+  "{abs exch abs 2 copy add 0.75 le"
+  " {dup mul exch dup mul add 1 exch sub}"
+  " {2 copy add 1.23 le"
+  " {0.85 mul add 1 exch sub}"
+  " {1 sub dup mul exch 1 sub dup mul add 1 sub}"
+  " ifelse} ifelse}"                               /* 20 Diamond */
+};
+#define HT_SPOT_FUNCTIONS_COUNT ((int)(sizeof(ht_spot_functions)/sizeof(ht_spot_functions[0])))
 
 #ifdef CUPS_RASTER_SYNCv1
 typedef cups_page_header2_t gs_page_header;
@@ -1026,6 +1065,27 @@ main (int argc, char **argv, char *envp[])
         }
       }
     }
+    else if (!strncasecmp(halftone_tmp, "spot", 4) &&
+             (halftone_tmp[4] == '-' || halftone_tmp[4] == '\0')) {
+      halftonetype = HALFTONE_SPOT;
+      if (halftone_tmp[4] == '-') {
+        const char *p = halftone_tmp + 5;
+        char *endp;
+        long v;
+        v = strtol(p, &endp, 10);
+        if (endp != p) { ht_frequency = (int)v; p = endp; }
+        if (*p == '-') {
+          p++;
+          v = strtol(p, &endp, 10);
+          if (endp != p) { ht_angle = (int)v; p = endp; }
+          if (*p == '-') {
+            p++;
+            v = strtol(p, &endp, 10);
+            if (endp != p) ht_dotshape = (int)v;
+          }
+        }
+      }
+    }
   }
 
   /* For bi-level type, also check print-color-mode, the way it is
@@ -1167,6 +1227,21 @@ main (int argc, char **argv, char *envp[])
     snprintf(tmpstr, sizeof(tmpstr),
              "<< /Frequency %d /Angle %d /DotShape %d >> .genordered /Default exch /Halftone defineresource sethalftone { } settransfer 0.003 setsmoothness",
 	     ht_frequency, ht_angle, ht_dotshape);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
+  }
+
+  /* PostScript HalftoneType 1 spot-function halftone algorithm.
+   *
+   * Spot functions are from PDF specification, see ht_spot_functions array. */
+  if (halftonetype == HALFTONE_SPOT) {
+    int shape = ht_dotshape;
+    if (shape < 0) shape = 0;
+    if (shape >= HT_SPOT_FUNCTIONS_COUNT) shape = HT_SPOT_FUNCTIONS_COUNT - 1;
+    fprintf(stderr, "DEBUG: Ghostscript using Spot halftone (frequency=%d angle=%d dotshape=%d).\n",
+	    ht_frequency, ht_angle, shape);
+    snprintf(tmpstr, sizeof(tmpstr),
+             "<< /HalftoneType 1 /Frequency %d /Angle %d /SpotFunction %s >> /Default exch /Halftone defineresource sethalftone",
+	     ht_frequency, ht_angle, ht_spot_functions[shape]);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
