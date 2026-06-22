@@ -69,7 +69,8 @@ typedef enum
   HALFTONE_DEFAULT,
   HALFTONE_STOCHASTIC,
   HALFTONE_FOO2ZJS,
-  HALFTONE_BI_LEVEL
+  HALFTONE_BI_LEVEL,
+  HALFTONE_DITHERING
 } cups_halftone_type_t;
 
 #ifdef CUPS_RASTER_SYNCv1
@@ -1000,6 +1001,8 @@ main (int argc, char **argv, char *envp[])
       halftonetype = HALFTONE_FOO2ZJS;
     else if (!strcasecmp(halftone_tmp, "bi-level"))
       halftonetype = HALFTONE_BI_LEVEL;
+    else if (!strcasecmp(halftone_tmp, "dithering"))
+      halftonetype = HALFTONE_DITHERING;
   }
 
   /* For bi-level type, also check print-color-mode, the way it is
@@ -1108,6 +1111,22 @@ main (int argc, char **argv, char *envp[])
   if (halftonetype == HALFTONE_BI_LEVEL) {
     fprintf(stderr, "DEBUG: Ghostscript using Bi-Level Halftone dithering.\n");
     cupsArrayAdd(gs_args, strdup("{ .5 gt { 1 } { 0 } ifelse} settransfer"));
+  }
+
+  /* Use 8x8 ordered dithering.
+   *
+   * This uses .setloresscreen Ghostscript setup function which is a part
+   * of dithering vs halftoning automatic selection code and is used only
+   * if DPI of the output device is low (< 150).
+   * To correctly force it, we need to call it in Install function of
+   * Page Device.
+   * DPI is auto-detected and passed for screen frequency calculation.
+   *
+   * Particularly useful for printing images on label printers (203 DPI).
+   */
+  if (halftonetype == HALFTONE_DITHERING) {
+    fprintf(stderr, "DEBUG: Ghostscript using 8x8 ordered dithering.\n");
+    cupsArrayAdd(gs_args, strdup("<< /Install { 72 72 matrix defaultmatrix dtransform abs exch abs .min .setloresscreen } >> setpagedevice"));
   }
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
