@@ -70,7 +70,8 @@ typedef enum
   HALFTONE_STOCHASTIC,
   HALFTONE_FOO2ZJS,
   HALFTONE_BI_LEVEL,
-  HALFTONE_DITHERING
+  HALFTONE_DITHERING,
+  HALFTONE_GENORDERED
 } cups_halftone_type_t;
 
 #ifdef CUPS_RASTER_SYNCv1
@@ -658,6 +659,7 @@ main (int argc, char **argv, char *envp[])
   int pxlcolor = 1;
   cups_halftone_type_t halftonetype = HALFTONE_DEFAULT;
   char *halftone_tmp = NULL;
+  int ht_frequency = 133, ht_angle = 45, ht_dotshape = 0;
 #ifdef HAVE_CUPS_1_7
   int pwgraster = 0;
   ppd_attr_t *attr;
@@ -1003,6 +1005,27 @@ main (int argc, char **argv, char *envp[])
       halftonetype = HALFTONE_BI_LEVEL;
     else if (!strcasecmp(halftone_tmp, "dithering"))
       halftonetype = HALFTONE_DITHERING;
+    else if (!strncasecmp(halftone_tmp, "genordered", 10) &&
+             (halftone_tmp[10] == '-' || halftone_tmp[10] == '\0')) {
+      halftonetype = HALFTONE_GENORDERED;
+      if (halftone_tmp[10] == '-') {
+        const char *p = halftone_tmp + 11;
+        char *endp;
+        long v;
+        v = strtol(p, &endp, 10);
+        if (endp != p) { ht_frequency = (int)v; p = endp; }
+        if (*p == '-') {
+          p++;
+          v = strtol(p, &endp, 10);
+          if (endp != p) { ht_angle = (int)v; p = endp; }
+          if (*p == '-') {
+            p++;
+            v = strtol(p, &endp, 10);
+            if (endp != p) ht_dotshape = (int)v;
+          }
+        }
+      }
+    }
   }
 
   /* For bi-level type, also check print-color-mode, the way it is
@@ -1127,6 +1150,24 @@ main (int argc, char **argv, char *envp[])
   if (halftonetype == HALFTONE_DITHERING) {
     fprintf(stderr, "DEBUG: Ghostscript using 8x8 ordered dithering.\n");
     cupsArrayAdd(gs_args, strdup("<< /Install { 72 72 matrix defaultmatrix dtransform abs exch abs .min .setloresscreen } >> setpagedevice"));
+  }
+
+  /* Ghostscript .genordered advanced ordered dithering
+   * PostScript HalftoneType 3 (threshold array based).
+   *
+   * This uses the .genordered operator to generate an ordered dither
+   * halftone screen with configurable frequency, angle and dot shape.
+   *
+   * Dot shapes:
+   * 0=CIRCLE, 1=REDBOOK, 2=INVERTED, 3=RHOMBOID, 4=LINE_X, 5=LINE_Y,
+   * 6=DIAMOND1, 7=DIAMOND2, 8=ROUNDSPOT */
+  if (halftonetype == HALFTONE_GENORDERED) {
+    fprintf(stderr, "DEBUG: Ghostscript using .genordered halftone (frequency=%d angle=%d dotshape=%d).\n",
+	    ht_frequency, ht_angle, ht_dotshape);
+    snprintf(tmpstr, sizeof(tmpstr),
+             "<< /Frequency %d /Angle %d /DotShape %d >> .genordered /Default exch /Halftone defineresource sethalftone { } settransfer 0.003 setsmoothness",
+	     ht_frequency, ht_angle, ht_dotshape);
+    cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
   /* Mark the end of PostScript commands supplied on the Ghostscript command
