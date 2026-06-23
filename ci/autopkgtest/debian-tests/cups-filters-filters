@@ -79,8 +79,12 @@ echo "generated inputs: $(ls -1 seed.* | tr '\n' ' ')"
 
 PASSED=""; SKIPPED=""; FAILED=""
 
-is_pdf()      { file -b "$1" | grep -qi 'PDF document'; }
-is_ps()       { file -b "$1" | grep -qi 'PostScript'; }
+# A PPD can legitimately make a filter wrap its PDF/PS payload in PJL/JCL
+# (ppdFilterEmitJCL), in which case file(1) reports "HP Printer Job Language
+# data" rather than the inner type.  Match the document signature directly so a
+# correctly PJL-wrapped result still passes.
+is_pdf()      { grep -qa '%PDF-' "$1"; }
+is_ps()       { grep -qa '%!PS\|%!PS-Adobe' "$1" || file -b "$1" | grep -qi 'PostScript'; }
 is_nonempty() { [ -s "$1" ]; }
 
 # test_filter <description> <filter-binary> <input> <output> <checker>

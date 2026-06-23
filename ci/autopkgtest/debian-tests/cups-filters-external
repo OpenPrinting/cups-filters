@@ -76,7 +76,9 @@ showpage
 PS
 [ -s seed.pdf ] || { echo "ERROR: failed to generate seed.pdf" >&2; exit 1; }
 
-is_pdf() { file -b "$1" | grep -qi 'PDF document'; }
+# Accept a PDF payload even when the PPD wraps it in PJL/JCL (file(1) would then
+# report "HP Printer Job Language data"); match the PDF signature directly.
+is_pdf() { grep -qa '%PDF-' "$1"; }
 
 run_mode() {   # run_mode <env-var-name> <description>
     _var="$1"; _desc="$2"; _out="out_$_var.pdf"
