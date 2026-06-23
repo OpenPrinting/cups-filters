@@ -132,6 +132,56 @@ PPD file of the print queue (usually in /etc/cups/ppd/):
 This option can be used when the print queue uses the gstoraster
 filter.
 
+### GHOSTSCRIPT RENDERING: HALFTONING AND DITHERING
+
+When using gstoX filters, it's possible to control halftone screens
+and dithering using "-o halftone-type=XXX" command line job option or
+"cupsHalftoneType" PPD option.
+
+Ghostscript uses the following default auto-detection:
+
+* DPI <  150: 8x8 ordered dithering
+* DPI >= 150: Horn's cosine line halftoning with screen angle 45 deg
+
+with "-o halftone-type=XXX", you can use other algorithms with
+additional options.
+
+Algorithms available:
+
+* `-o halftone-type=bi-level`, simple black-or-white threshold,
+      best suited for label printers
+* `-o halftone-type=stochastic` (also =yes), stochastic threshold-array
+      halftoning
+* `-o halftone-type=foo2zjs`, high-quality per-color halftone screen,
+      best for laser/ink printers, with the following configuration:  
+      Frequency=150,  
+      Angle=105 (Cyan), 165 (Magenta), 30 (Yellow), 45 (Black), 37 (def),  
+      Spot Function=CosineDot
+* `-o halftone-type=dithering`, forces 8x8 ordered dithering
+* `-o halftone-type=genordered[-frequency][-angle][-dotshape]`
+* `-o halftone-type=spot[-frequency][-angle][-dotshape]`
+
+genordered is a halftone+ordered dithering algorithm,  
+  frequency - line-per-inch, number of halftone cells per inch.  
+              Lower produces larger dots, higher - smaller.  
+              Values good for 203DPI label printer: 50-60  
+                              600DPI laser printer: 106-150  
+  angle - screen orientation, in degrees.  
+  dotshape - one of:  
+    0=CIRCLE, 1=REDBOOK, 2=INVERTED, 3=RHOMBOID, 4=LINE_X, 5=LINE_Y,  
+    6=DIAMOND1, 7=DIAMOND2, 8=ROUNDSPOT
+
+spot is a halftone algorithm from PDF specification,  
+  frequency, angle - same as for genordered  
+  dotshape - one of:  
+    0=SimpleDot 1=InvertedSimpleDot 2=DoubleDot 3=InvertedDoubleDot  
+    4=CosineDot 5=Double 6=InvertedDouble 7=Line 8=LineX 9=LineY 10=Round  
+    11=Ellipse 12=EllipseA 13=InvertedEllipseA 14=EllipseB 15=EllipseC  
+    16=InvertedEllipseC 17=Square 18=Cross 19=Rhomboid 20=Diamond
+
+Algorithm could be selected per-queue, for example:  
+  lpadmin -p printer -o halftone-type-default=genordered-150-45
+
 ### POSTSCRIPT PRINTING RENDERER AND RESOLUTION SELECTION
 
 If you use CUPS with this package and a PostScript printer then
