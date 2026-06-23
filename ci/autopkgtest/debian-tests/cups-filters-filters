@@ -1,0 +1,133 @@
+#!/bin/sh
+# autopkgtest check: exercise the cups-filters filter executables directly via
+# the CUPS filter calling convention
+#
+#     filter job-id user title copies options [filename]
+#
+# reading the input on stdin and writing the result to stdout -- exactly as
+# cupsd invokes them, but with no running cupsd, no root and no network.  That
+# keeps the failure surface tiny and the test identical on native and emulated
+# architectures.  It is the modern, precise replacement for the old 1.x
+# "print a page through a dummy queue" autopkgtest: it verifies the same thing
+# (the filters actually transform real documents) without depending on the
+# removed file:// backend or a scheduler.
+#
+# Inputs are generated on the fly with Ghostscript so no binary fixtures are
+# shipped.  Each filter is guarded: a filter that was disabled at ./configure
+# time is SKIPped; a filter that is present but misbehaves FAILs.  The two
+# unconditional core filters (pdftopdf, pdftops) must run and pass.
+#
+# Env overrides (default to the installed-system paths; redirected into the
+# staged tree by `make test-autopkgtest`):
+#   CUPS_FILTERS_FILTERDIR   dir holding the filter binaries
+#   CUPS_FILTERS_PPD         a PPD passed to the filters (optional but preferred)
+#
+# (C) 2026 OpenPrinting / Rohit Kumar.  Licensed under Apache License v2.0.
+
+set -eu
+
+: "${CUPS_FILTERS_FILTERDIR:=/usr/lib/cups/filter}"
+: "${CUPS_FILTERS_PPD:=}"
+
+WORKDIR="$(mktemp -d)"
+export HOME="$WORKDIR"
+export XDG_RUNTIME_DIR="$WORKDIR"
+trap 'cd /; rm -rf "$WORKDIR"' 0 INT QUIT ABRT PIPE TERM
+cd "$WORKDIR"
+
+FILTERDIR="$CUPS_FILTERS_FILTERDIR"
+echo "filter directory: $FILTERDIR"
+[ -d "$FILTERDIR" ] || { echo "ERROR: filter directory not found: $FILTERDIR" >&2; exit 1; }
+
+# A PPD makes the filters deterministic; pass it through the environment when we
+# have one.  Locate a shipped generic PDF PPD if the caller did not name one.
+if [ -z "$CUPS_FILTERS_PPD" ]; then
+    for cand in \
+        /usr/share/ppd/cupsfilters/Generic-PDF_Printer-PDF.ppd \
+        /usr/share/cups/model/Generic-PDF_Printer-PDF.ppd; do
+        [ -f "$cand" ] && { CUPS_FILTERS_PPD="$cand"; break; }
+    done
+fi
+if [ -n "$CUPS_FILTERS_PPD" ] && [ -f "$CUPS_FILTERS_PPD" ]; then
+    export PPD="$CUPS_FILTERS_PPD"
+    echo "using PPD: $PPD"
+else
+    echo "note: no PPD available; running filters in PPD-less mode"
+fi
+
+# Ghostscript seeds every input; it is a hard dependency of this test.
+command -v gs >/dev/null 2>&1 || { echo "ERROR: ghostscript (gs) is required to generate inputs" >&2; exit 1; }
+
+gs_page() {   # gs_page <device> <outfile>
+    gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE="$1" -sOutputFile="$2" - >/dev/null 2>&1 <<'PS'
+%!PS
+/Helvetica findfont 18 scalefont setfont
+72 720 moveto (cups-filters autopkgtest page) show
+72 690 moveto (The quick brown fox jumps over the lazy dog.) show
+showpage
+PS
+}
+
+printf 'cups-filters autopkgtest\nThe quick brown fox jumps over the lazy dog.\n' > seed.txt
+gs_page pdfwrite seed.pdf
+gs_page ps2write seed.ps
+gs_page png16m   seed.png
+for s in seed.pdf seed.ps seed.png; do
+    [ -s "$s" ] || { echo "ERROR: failed to generate input $s" >&2; exit 1; }
+done
+echo "generated inputs: $(ls -1 seed.* | tr '\n' ' ')"
+
+PASSED=""; SKIPPED=""; FAILED=""
+
+is_pdf()      { file -b "$1" | grep -qi 'PDF document'; }
+is_ps()       { file -b "$1" | grep -qi 'PostScript'; }
+is_nonempty() { [ -s "$1" ]; }
+
+# test_filter <description> <filter-binary> <input> <output> <checker>
+test_filter() {
+    _desc="$1"; _bin="$2"; _in="$3"; _out="$4"; _check="$5"
+    if [ ! -x "$FILTERDIR/$_bin" ]; then
+        echo "SKIP $_desc -- $_bin not built"
+        SKIPPED="$SKIPPED $_bin"
+        return 0
+    fi
+    echo "RUN  $_desc ($_bin)"
+    if ! "$FILTERDIR/$_bin" 1 tester "autopkgtest" 1 "" < "$_in" > "$_out"; then
+        echo "FAIL $_desc -- $_bin exited non-zero" >&2
+        FAILED="$FAILED $_bin"
+        return 0
+    fi
+    if ! "$_check" "$_out"; then
+        echo "FAIL $_desc -- unexpected output: $(file -b "$_out" 2>/dev/null)" >&2
+        FAILED="$FAILED $_bin"
+        return 0
+    fi
+    echo "PASS $_desc -- $(file -b "$_out" 2>/dev/null)"
+    PASSED="$PASSED $_bin"
+    return 0
+}
+
+# --- the filter matrix (input domain chosen to match each filter) -----------
+test_filter "text -> PDF"        texttopdf   seed.txt out_texttopdf.pdf   is_pdf
+test_filter "PDF -> PDF"         pdftopdf    seed.pdf out_pdftopdf.pdf    is_pdf
+test_filter "PDF -> PostScript"  pdftops     seed.pdf out_pdftops.ps      is_ps
+test_filter "PostScript -> PDF"  gstopdf     seed.ps  out_gstopdf.pdf     is_pdf
+test_filter "PDF -> CUPS raster" pdftoraster seed.pdf out_pdftoraster.ras is_nonempty
+test_filter "PDF -> CUPS raster" gstoraster  seed.pdf out_gstoraster.ras  is_nonempty
+test_filter "image -> PDF"       imagetopdf  seed.png out_imagetopdf.pdf  is_pdf
+
+echo "----------------------------------------------------------------------------"
+echo "PASS:${PASSED:- (none)}"
+echo "SKIP:${SKIPPED:- (none)}"
+echo "FAIL:${FAILED:- (none)}"
+
+# The two unconditional core filters must have actually run and passed.
+for core in pdftopdf pdftops; do
+    case " $PASSED " in
+        *" $core "*) ;;
+        *) echo "ERROR: core filter '$core' did not pass" >&2; exit 1 ;;
+    esac
+done
+
+[ -z "$FAILED" ] || { echo "ERROR: one or more built filters failed:$FAILED" >&2; exit 1; }
+echo "cups-filters-filters: OK"

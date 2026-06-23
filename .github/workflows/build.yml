@@ -56,7 +56,7 @@ jobs:
             libcups2-dev libcupsimage2-dev libqpdf-dev \
             libpoppler-dev libpoppler-cpp-dev libpng-dev \
             libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools \
+            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools file \
             autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
             libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
             zlib1g-dev
@@ -118,6 +118,14 @@ jobs:
           cd "$REPO_DIR"
           make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
 
+      - name: Run downstream autopkgtests (native)
+        if: matrix.use-qemu == false
+        run: |
+          set -ex
+          cd "$REPO_DIR"
+          # Staged, unprivileged run against the DESTDIR tree (no system pollution).
+          make test-autopkgtest CIROOT="$REPO_DIR/_ciroot"
+
       # ========================================================================
       # EMULATED BUILD (armv7 and riscv64)
       # ========================================================================
@@ -149,7 +157,7 @@ jobs:
               libcups2-dev libcupsimage2-dev libqpdf-dev \
               libpoppler-dev libpoppler-cpp-dev libpng-dev \
               libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-              ghostscript poppler-utils git curl wget tar mupdf-tools \
+              ghostscript poppler-utils git curl wget tar mupdf-tools file \
               autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
               libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
               zlib1g-dev
@@ -200,6 +208,9 @@ jobs:
 
             # Run test suite with strict error handling
             make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
+
+            # Staged, unprivileged downstream autopkgtests
+            make test-autopkgtest CIROOT="$REPO_DIR/_ciroot"
 
       # ========================================================================
       # ARTIFACT COLLECTION (both native and emulated)

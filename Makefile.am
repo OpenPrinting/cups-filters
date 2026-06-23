@@ -665,3 +665,54 @@ if ENABLE_DRIVERLESS
 endif
 
 SUBDIRS =
+
+# ============================================================================
+# Downstream autopkgtests, runnable in CI (Phase 2)
+# ============================================================================
+# Vendored test scripts + a DESTDIR-staging wrapper, so the same scripts serve
+# the Debian/Ubuntu autopkgtests and our GitHub CI.  `make test-autopkgtest`
+# builds, DESTDIR-installs into an ephemeral $(CIROOT) tree (plus the
+# test-external check program), and runs the scripts against that tree with the
+# CUPS_FILTERS_* env overrides -- no root, no system pollution, identical on
+# native and QEMU-emulated architectures.  Override the staging root with
+# `make test-autopkgtest CIROOT=/some/space-free/dir`.
+EXTRA_DIST += \
+	ci/autopkgtest/run.sh \
+	ci/autopkgtest/debian-tests/control \
+	ci/autopkgtest/debian-tests/cups-filters-filters \
+	ci/autopkgtest/debian-tests/cups-filters-external
+
+CIROOT = $(abs_top_builddir)/_ciroot
+
+stage-ciroot: all
+	rm -rf "$(CIROOT)"
+	$(MAKE) $(AM_MAKEFLAGS) install DESTDIR="$(CIROOT)"
+	$(MAKE) $(AM_MAKEFLAGS) test-external
+
+# CUPS_FILTERS_* point the scripts at the staged binaries / source PPD instead
+# of the system /usr paths, so no script hard-codes an absolute path.
+CIROOT_ENV = \
+	CIROOT="$(CIROOT)" \
+	CIPREFIX="$(exec_prefix)" \
+	TOP_BUILDDIR="$(abs_top_builddir)" \
+	CUPS_FILTERS_FILTERDIR="$(CIROOT)$(pkgfilterdir)" \
+	CUPS_FILTERS_BACKENDDIR="$(CIROOT)$(pkgbackenddir)" \
+	CUPS_FILTERS_BINDIR="$(CIROOT)$(bindir)" \
+	CUPS_FILTERS_PPD="$(abs_top_srcdir)/ppdfiles/Generic-PDF_Printer-PDF.ppd" \
+	CUPS_FILTERS_TESTEXTERNAL="$(abs_top_builddir)/test-external"
+
+test-autopkgtest: stage-ciroot
+	$(CIROOT_ENV) \
+	    $(SHELL) $(srcdir)/ci/autopkgtest/run.sh cups-filters-filters cups-filters-external
+
+# Single-test convenience targets (handy for debugging one case in isolation).
+test-autopkgtest-filters: stage-ciroot
+	$(CIROOT_ENV) \
+	    $(SHELL) $(srcdir)/ci/autopkgtest/run.sh cups-filters-filters
+
+test-autopkgtest-external: stage-ciroot
+	$(CIROOT_ENV) \
+	    $(SHELL) $(srcdir)/ci/autopkgtest/run.sh cups-filters-external
+
+.PHONY: stage-ciroot test-autopkgtest \
+	test-autopkgtest-filters test-autopkgtest-external

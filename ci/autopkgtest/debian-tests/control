@@ -1,0 +1,21 @@
+# Autopkgtests for cups-filters, runnable both downstream (Debian/Ubuntu, against
+# the installed package, optionally as root) and upstream in CI (against a staged
+# `make stage-ciroot` tree via ci/autopkgtest/run.sh).  See ci/autopkgtest/run.sh.
+
+# Exercise the filter executables directly via the CUPS filter calling
+# convention (no running cupsd needed) on self-generated inputs.
+Tests: cups-filters-filters
+Depends: cups-filters,
+         cups-client,
+         ghostscript,
+         poppler-utils,
+         file,
+Restrictions: allow-stderr
+
+# Exercise the cfFilterExternal()/ppdFilterExternalCUPS() filter functions
+# through the upstream test-external wrapper.
+Tests: cups-filters-external
+Depends: cups-filters,
+         ghostscript,
+         file,
+Restrictions: allow-stderr

@@ -1,0 +1,101 @@
+#!/bin/sh
+# autopkgtest check: exercise the cfFilterExternal() and ppdFilterExternalCUPS()
+# filter functions through the upstream test-external wrapper
+# (filter/test-external.c, the repo's only check_PROGRAM).
+#
+# test-external is itself a CUPS filter: invoked with the usual
+#     test-external job-id user title copies options [file]
+# convention, it runs the real filter named in one of its mode environment
+# variables as a filter *function*:
+#   FILTER=<path>     -> cfFilterExternal()        (libcupsfilters)
+#   CUPSFILTER=<path> -> ppdFilterExternalCUPS()   (libppd)
+# We feed a generated PDF through pdftopdf via each mode and confirm a PDF comes
+# out, proving the wrapper functions load and drive an external filter.
+#
+# test-external is a check program, not an installed binary, so:
+#   * when CUPS_FILTERS_TESTEXTERNAL is set (CI staged run) it MUST be present;
+#   * otherwise, if no test-external is on PATH (true downstream install), the
+#     test SKIPs cleanly instead of failing.
+#
+# Env overrides:
+#   CUPS_FILTERS_TESTEXTERNAL  path to the built test-external binary
+#   CUPS_FILTERS_FILTERDIR     dir holding the filter binaries
+#   CUPS_FILTERS_PPD           a PPD passed through to the wrapper
+#
+# (C) 2026 OpenPrinting / Rohit Kumar.  Licensed under Apache License v2.0.
+
+set -eu
+
+: "${CUPS_FILTERS_TESTEXTERNAL:=}"
+: "${CUPS_FILTERS_FILTERDIR:=/usr/lib/cups/filter}"
+: "${CUPS_FILTERS_PPD:=}"
+
+WORKDIR="$(mktemp -d)"
+export HOME="$WORKDIR"
+export XDG_RUNTIME_DIR="$WORKDIR"
+trap 'cd /; rm -rf "$WORKDIR"' 0 INT QUIT ABRT PIPE TERM
+cd "$WORKDIR"
+
+# Resolve the test-external binary.
+if [ -n "$CUPS_FILTERS_TESTEXTERNAL" ]; then
+    TE="$CUPS_FILTERS_TESTEXTERNAL"
+    [ -x "$TE" ] || { echo "ERROR: test-external not executable: $TE" >&2; exit 1; }
+else
+    TE="$(command -v test-external 2>/dev/null || true)"
+    if [ -z "$TE" ]; then
+        echo "SKIP: test-external not available (check program, not installed downstream)"
+        exit 0
+    fi
+fi
+echo "test-external: $TE"
+
+# The external filter we drive must exist (pdftopdf is an unconditional filter).
+TARGET="$CUPS_FILTERS_FILTERDIR/pdftopdf"
+[ -x "$TARGET" ] || { echo "ERROR: target filter not found: $TARGET" >&2; exit 1; }
+echo "target filter: $TARGET"
+
+# Provide a PPD when available (the wrapper goes through ppdFilterCUPSWrapper).
+if [ -z "$CUPS_FILTERS_PPD" ]; then
+    for cand in \
+        /usr/share/ppd/cupsfilters/Generic-PDF_Printer-PDF.ppd \
+        /usr/share/cups/model/Generic-PDF_Printer-PDF.ppd; do
+        [ -f "$cand" ] && { CUPS_FILTERS_PPD="$cand"; break; }
+    done
+fi
+if [ -n "$CUPS_FILTERS_PPD" ] && [ -f "$CUPS_FILTERS_PPD" ]; then
+    export PPD="$CUPS_FILTERS_PPD"
+    echo "using PPD: $PPD"
+fi
+
+command -v gs >/dev/null 2>&1 || { echo "ERROR: ghostscript (gs) is required to generate input" >&2; exit 1; }
+gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -sOutputFile=seed.pdf - >/dev/null 2>&1 <<'PS'
+%!PS
+/Helvetica findfont 18 scalefont setfont
+72 720 moveto (cups-filters test-external page) show
+showpage
+PS
+[ -s seed.pdf ] || { echo "ERROR: failed to generate seed.pdf" >&2; exit 1; }
+
+is_pdf() { file -b "$1" | grep -qi 'PDF document'; }
+
+run_mode() {   # run_mode <env-var-name> <description>
+    _var="$1"; _desc="$2"; _out="out_$_var.pdf"
+    echo "RUN  $_desc ($_var=$TARGET)"
+    if ! env "$_var=$TARGET" "$TE" 1 tester "autopkgtest" 1 "" < seed.pdf > "$_out"; then
+        echo "FAIL $_desc -- test-external exited non-zero" >&2
+        return 1
+    fi
+    if ! is_pdf "$_out"; then
+        echo "FAIL $_desc -- unexpected output: $(file -b "$_out" 2>/dev/null)" >&2
+        return 1
+    fi
+    echo "PASS $_desc -- $(file -b "$_out" 2>/dev/null)"
+    return 0
+}
+
+rc=0
+run_mode FILTER     "cfFilterExternal() via FILTER"        || rc=1
+run_mode CUPSFILTER "ppdFilterExternalCUPS() via CUPSFILTER" || rc=1
+
+[ "$rc" -eq 0 ] || { echo "ERROR: test-external wrapper checks failed" >&2; exit 1; }
+echo "cups-filters-external: OK"
