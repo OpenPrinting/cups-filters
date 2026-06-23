@@ -1,20 +1,35 @@
-name: Multi-Architecture CI Build & Test
+# Multi-Architecture / multi-CUPS Build and Test Workflow for cups-filters
+#
+# Matrix: 4 architectures x 3 CUPS releases = 12 combinations.
+#   architectures: x86_64, arm64 (native runners); armv7, riscv64 (QEMU)
+#   CUPS releases: 2.4.x (distro libcups2-dev), 2.5.x (OpenPrinting/cups
+#                  master), 3.x (OpenPrinting/libcups master)
+# All the per-combination work lives in ci/ci-setup.sh so the legs differ only
+# in which CUPS is provided and whether they run under emulation.  Each leg
+# builds pdfio + libcupsfilters + libppd against the selected CUPS, then
+# cups-filters, then runs the downstream autopkgtests (make test-autopkgtest).
+name: Build and Test (Multi-Architecture, Multi-CUPS)
 
 on:
   push:
-    branches: [ '**' ]
+    branches:
+      - '**'
   pull_request:
-    branches: [ '**' ]
+    branches:
+      - '**'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    name: Build & Test (${{ matrix.arch }})
-    runs-on: ${{ matrix.runs-on }}
-    
+  build-matrix:
     strategy:
       fail-fast: false
       matrix:
+        arch: [x86_64, arm64, armv7, riscv64]
+        cups: [system-2x, source-2.5.x, source-3.x]
         include:
           - arch: x86_64
             runs-on: ubuntu-latest
@@ -25,202 +40,91 @@ jobs:
           - arch: armv7
             runs-on: ubuntu-latest
             use-qemu: true
-            qemu-arch: armv7
           - arch: riscv64
             runs-on: ubuntu-latest
             use-qemu: true
-            qemu-arch: riscv64
+
+    runs-on: ${{ matrix.runs-on }}
+    name: Build & Test (${{ matrix.arch }}, ${{ matrix.cups }})
+    # Building CUPS 2.5 / libcups3 from source under QEMU is slow; allow plenty.
+    timeout-minutes: 360
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Save workspace directory
-        run: |
-          echo "REPO_DIR=$(pwd)" >> $GITHUB_ENV
-
-      # ========================================================================
-      # NATIVE BUILD (x86_64 and arm64)
-      # ========================================================================
-      - name: Install build dependencies (native)
+      # ==========================================
+      # NATIVE EXECUTION (x86_64 and arm64)
+      # ==========================================
+      - name: Build & Test (Native)
         if: matrix.use-qemu == false
+        env:
+          CC: /usr/bin/gcc
+          CUPS_KIND: ${{ matrix.cups }}
+          EMULATED: "0"
         run: |
-          # Add retries to prevent transient Ubuntu mirror sync failures
-          sudo apt-get clean
-          sudo apt-get update -o Acquire::Retries=3
-          # Remove conflicting system packages
-          sudo apt-get remove -y libcupsfilters-dev libppd-dev || true
-          # Install comprehensive OpenPrinting dependency stack
-          sudo apt-get install -y \
-            build-essential gcc g++ cmake autoconf automake libtool pkg-config \
-            libcups2-dev libcupsimage2-dev libqpdf-dev \
-            libpoppler-dev libpoppler-cpp-dev libpng-dev \
-            libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-            ghostscript poppler-utils tzdata git curl wget tar mupdf-tools file \
-            autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
-            libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
-            zlib1g-dev
+          set -ex
+          sh ci/ci-setup.sh deps
+          sh ci/ci-setup.sh cups "${{ matrix.cups }}"
+          sh ci/ci-setup.sh pdfio
+          sh ci/ci-setup.sh libcupsfilters "${{ matrix.cups }}"
+          sh ci/ci-setup.sh libppd "${{ matrix.cups }}"
+          sh ci/ci-setup.sh build-cups-filters
 
-      - name: Build pdfio, libcupsfilters, and libppd (native)
+      - name: Autopkgtest (DESTDIR staging, native)
+        # Run the downstream autopkgtest suite (filter chain + test-external)
+        # against every CUPS version under test.
         if: matrix.use-qemu == false
         run: |
           set -ex
-          
-          # Build the latest RELEASED PDFio. libcupsfilters tracks the newest
-          # PDFio, so pinning a version goes stale and breaks the build the
-          # moment libcupsfilters bumps its requirement. Resolving the newest
-          # release tag dynamically keeps this in lock-step automatically.
-          cd /tmp
-          PDFIO_VER=$(git ls-remote --tags --refs https://github.com/michaelrsweet/pdfio.git \
-            | sed 's#.*/v##' | sort -V | tail -1)
-          echo "Building PDFio $PDFIO_VER (latest release)"
-          wget -q "https://github.com/michaelrsweet/pdfio/releases/download/v${PDFIO_VER}/pdfio-${PDFIO_VER}.tar.gz"
-          tar -xzf "pdfio-${PDFIO_VER}.tar.gz"
-          cd "pdfio-${PDFIO_VER}"
-          ./configure --prefix=/usr --enable-shared
-          make all
-          sudo make install
-          sudo ldconfig
+          make test-autopkgtest V=1
 
-          # Clone and build libcupsfilters
-          cd /tmp
-          git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
-          cd libcupsfilters
-          ./autogen.sh
-          ./configure --prefix=/usr
-          make -j$(nproc)
-          sudo make install
-          sudo ldconfig
-
-          # Clone and build libppd
-          cd /tmp
-          git clone --depth 1 https://github.com/OpenPrinting/libppd.git
-          cd libppd
-          ./autogen.sh
-          ./configure --prefix=/usr
-          make -j$(nproc)
-          sudo make install
-          sudo ldconfig
-
-      - name: Build cups-filters (native)
-        if: matrix.use-qemu == false
-        run: |
-          set -ex
-          cd "$REPO_DIR"
-          ./autogen.sh
-          ./configure --prefix=/usr
-          make -j$(nproc) V=1
-
-      - name: Run test suite (native)
-        if: matrix.use-qemu == false
-        run: |
-          set -ex
-          cd "$REPO_DIR"
-          make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
-
-      - name: Run downstream autopkgtests (native)
-        if: matrix.use-qemu == false
-        run: |
-          set -ex
-          cd "$REPO_DIR"
-          # Staged, unprivileged run against the DESTDIR tree (no system pollution).
-          make test-autopkgtest CIROOT="$REPO_DIR/_ciroot"
-
-      # ========================================================================
-      # EMULATED BUILD (armv7 and riscv64)
-      # ========================================================================
-      - name: Set up QEMU for emulation
-        if: matrix.use-qemu == true
-        uses: docker/setup-qemu-action@v3
+      - name: Upload test artifacts (Native)
+        if: matrix.use-qemu == false && always()
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
         with:
-          platforms: ${{ matrix.qemu-arch }}
+          name: cups-filters-logs-${{ matrix.arch }}-${{ matrix.cups }}
+          path: |
+            config.log
+            test-suite.log
+            **/*.log
+          if-no-files-found: ignore
 
-      - name: Build and test on emulated architecture
+      # ==========================================
+      # EMULATED EXECUTION (armv7 and riscv64)
+      # ==========================================
+      - name: Build & Test (Emulated)
         if: matrix.use-qemu == true
         uses: uraimo/run-on-arch-action@v3
         with:
-          arch: ${{ matrix.qemu-arch }}
+          arch: ${{ matrix.arch }}
           distro: ubuntu24.04
-          dockerRunArgs: |
-            --volume "${{ github.workspace }}:/workspace"
+          githubToken: ${{ github.token }}
           install: |
-            # Add retries to prevent transient Ubuntu mirror sync failures
-            apt-get clean
-            apt-get update -o Acquire::Retries=3
-            
-            DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-            # Remove conflicting system packages
-            apt-get remove -y libcupsfilters-dev libppd-dev 2>/dev/null || true
-            # Install comprehensive OpenPrinting dependency stack
-            apt-get install -y \
-              build-essential gcc g++ cmake autoconf automake libtool pkg-config \
-              libcups2-dev libcupsimage2-dev libqpdf-dev \
-              libpoppler-dev libpoppler-cpp-dev libpng-dev \
-              libjpeg-dev libtiff-dev libfontconfig1-dev libfreetype6-dev \
-              ghostscript poppler-utils git curl wget tar mupdf-tools file \
-              autopoint gettext libjxl-dev libopenjp2-7-dev liblcms2-dev \
-              libavahi-client-dev libavahi-common-dev libdbus-1-dev libexif-dev \
-              zlib1g-dev
+            apt-get update --fix-missing -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata ca-certificates git
           run: |
             set -ex
-            export REPO_DIR="/workspace"
+            export CUPS_KIND="${{ matrix.cups }}"
+            export EMULATED=1
+            sh ci/ci-setup.sh deps
+            sh ci/ci-setup.sh cups "${{ matrix.cups }}"
+            sh ci/ci-setup.sh pdfio
+            sh ci/ci-setup.sh libcupsfilters "${{ matrix.cups }}"
+            sh ci/ci-setup.sh libppd "${{ matrix.cups }}"
+            sh ci/ci-setup.sh build-cups-filters
+            make test-autopkgtest V=1
 
-            # Build the latest RELEASED PDFio (see the native job for rationale):
-            # pinning a version goes stale when libcupsfilters bumps its
-            # requirement, so resolve the newest release tag dynamically.
-            cd /tmp
-            PDFIO_VER=$(git ls-remote --tags --refs https://github.com/michaelrsweet/pdfio.git \
-              | sed 's#.*/v##' | sort -V | tail -1)
-            echo "Building PDFio $PDFIO_VER (latest release)"
-            wget -q "https://github.com/michaelrsweet/pdfio/releases/download/v${PDFIO_VER}/pdfio-${PDFIO_VER}.tar.gz"
-            tar -xzf "pdfio-${PDFIO_VER}.tar.gz"
-            cd "pdfio-${PDFIO_VER}"
-            ./configure --prefix=/usr --enable-shared
-            make all
-            make install
-            ldconfig
-
-            # Clone and build libcupsfilters
-            cd /tmp
-            git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
-            cd libcupsfilters
-            ./autogen.sh
-            ./configure --prefix=/usr
-            make -j$(nproc)
-            make install
-            ldconfig
-
-            # Clone and build libppd
-            cd /tmp
-            git clone --depth 1 https://github.com/OpenPrinting/libppd.git
-            cd libppd
-            ./autogen.sh
-            ./configure --prefix=/usr
-            make -j$(nproc)
-            make install
-            ldconfig
-
-            # CRITICAL: Return to workspace (not pwd, which would be /tmp/libppd)
-            cd "$REPO_DIR"
-            ./autogen.sh
-            ./configure --prefix=/usr
-            make -j$(nproc) V=1
-
-            # Run test suite with strict error handling
-            make check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
-
-            # Staged, unprivileged downstream autopkgtests
-            make test-autopkgtest CIROOT="$REPO_DIR/_ciroot"
-
-      # ========================================================================
-      # ARTIFACT COLLECTION (both native and emulated)
-      # ========================================================================
-      - name: Upload test logs on failure
-        if: always()
+      - name: Upload test artifacts (Emulated)
+        if: matrix.use-qemu == true && always()
+        continue-on-error: true
+        timeout-minutes: 5
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs-${{ matrix.arch }}
+          name: cups-filters-logs-${{ matrix.arch }}-${{ matrix.cups }}
           path: |
+            config.log
             test-suite.log
             **/*.log
           if-no-files-found: ignore
