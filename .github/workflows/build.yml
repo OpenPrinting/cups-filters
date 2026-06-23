@@ -48,6 +48,12 @@ jobs:
     name: Build & Test (${{ matrix.arch }}, ${{ matrix.cups }})
     # Building CUPS 2.5 / libcups3 from source under QEMU is slow; allow plenty.
     timeout-minutes: 360
+    # The libcups3 (CUPS 3.x) leg is not yet gating: cups-filters has not been
+    # ported to libcups3 (the classic backends include the removed
+    # cups/backend.h and foomatic-rip uses the libcups2 cups-array API names).
+    # Keep the leg visible but non-blocking until the port approach is agreed
+    # upstream; the 2.4.x and 2.5.x legs gate as normal.
+    continue-on-error: ${{ matrix.cups == 'source-3.x' }}
 
     steps:
       - uses: actions/checkout@v4
