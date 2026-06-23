@@ -77,7 +77,7 @@ for s in seed.pdf seed.ps seed.png; do
 done
 echo "generated inputs: $(ls -1 seed.* | tr '\n' ' ')"
 
-PASSED=""; SKIPPED=""; FAILED=""
+PASSED=""; SKIPPED=""; FAILED=""; BESTEFFORT=""
 
 # A PPD can legitimately make a filter wrap its PDF/PS payload in PJL/JCL
 # (ppdFilterEmitJCL), in which case file(1) reports "HP Printer Job Language
@@ -87,42 +87,56 @@ is_pdf()      { grep -qa '%PDF-' "$1"; }
 is_ps()       { grep -qa '%!PS\|%!PS-Adobe' "$1" || file -b "$1" | grep -qi 'PostScript'; }
 is_nonempty() { [ -s "$1" ]; }
 
-# test_filter <description> <filter-binary> <input> <output> <checker>
+# test_filter <description> <filter-binary> <input> <output> <checker> [mode]
+#   mode (default strict): a failure of a built filter fails the suite.
+#   mode besteffort: a failure is reported as WARN only, not fatal.  Used for the
+#     CUPS-raster filters (gstoraster/pdftoraster): invoked standalone here, with
+#     no cupsd, they lack the full raster job context (FINAL_CONTENT_TYPE, etc.)
+#     and their behaviour varies with the libcupsfilters version they wrap, so a
+#     standalone failure is not conclusive.  Authoritative raster coverage is the
+#     job of the end-to-end print-path test (run through a real cupsd).
 test_filter() {
-    _desc="$1"; _bin="$2"; _in="$3"; _out="$4"; _check="$5"
+    _desc="$1"; _bin="$2"; _in="$3"; _out="$4"; _check="$5"; _mode="${6:-strict}"
     if [ ! -x "$FILTERDIR/$_bin" ]; then
         echo "SKIP $_desc -- $_bin not built"
         SKIPPED="$SKIPPED $_bin"
         return 0
     fi
     echo "RUN  $_desc ($_bin)"
+    _err=""
     if ! "$FILTERDIR/$_bin" 1 tester "autopkgtest" 1 "" < "$_in" > "$_out"; then
-        echo "FAIL $_desc -- $_bin exited non-zero" >&2
-        FAILED="$FAILED $_bin"
-        return 0
+        _err="$_bin exited non-zero"
+    elif ! "$_check" "$_out"; then
+        _err="unexpected output: $(file -b "$_out" 2>/dev/null)"
     fi
-    if ! "$_check" "$_out"; then
-        echo "FAIL $_desc -- unexpected output: $(file -b "$_out" 2>/dev/null)" >&2
+    if [ -z "$_err" ]; then
+        echo "PASS $_desc -- $(file -b "$_out" 2>/dev/null)"
+        PASSED="$PASSED $_bin"
+    elif [ "$_mode" = besteffort ]; then
+        echo "WARN $_desc -- $_err (best-effort raster filter; not failing the suite)" >&2
+        BESTEFFORT="$BESTEFFORT $_bin"
+    else
+        echo "FAIL $_desc -- $_err" >&2
         FAILED="$FAILED $_bin"
-        return 0
     fi
-    echo "PASS $_desc -- $(file -b "$_out" 2>/dev/null)"
-    PASSED="$PASSED $_bin"
     return 0
 }
 
 # --- the filter matrix (input domain chosen to match each filter) -----------
+# Document-transform filters are strict; raster filters are best-effort (see
+# test_filter()).
 test_filter "text -> PDF"        texttopdf   seed.txt out_texttopdf.pdf   is_pdf
 test_filter "PDF -> PDF"         pdftopdf    seed.pdf out_pdftopdf.pdf    is_pdf
 test_filter "PDF -> PostScript"  pdftops     seed.pdf out_pdftops.ps      is_ps
 test_filter "PostScript -> PDF"  gstopdf     seed.ps  out_gstopdf.pdf     is_pdf
-test_filter "PDF -> CUPS raster" pdftoraster seed.pdf out_pdftoraster.ras is_nonempty
-test_filter "PDF -> CUPS raster" gstoraster  seed.pdf out_gstoraster.ras  is_nonempty
 test_filter "image -> PDF"       imagetopdf  seed.png out_imagetopdf.pdf  is_pdf
+test_filter "PDF -> CUPS raster" pdftoraster seed.pdf out_pdftoraster.ras is_nonempty besteffort
+test_filter "PDF -> CUPS raster" gstoraster  seed.pdf out_gstoraster.ras  is_nonempty besteffort
 
 echo "----------------------------------------------------------------------------"
 echo "PASS:${PASSED:- (none)}"
 echo "SKIP:${SKIPPED:- (none)}"
+echo "WARN:${BESTEFFORT:- (none)}"
 echo "FAIL:${FAILED:- (none)}"
 
 # The two unconditional core filters must have actually run and passed.
@@ -134,4 +148,4 @@ for core in pdftopdf pdftops; do
 done
 
 [ -z "$FAILED" ] || { echo "ERROR: one or more built filters failed:$FAILED" >&2; exit 1; }
-echo "cups-filters-filters: OK"
+echo "cups-filters-filters: OK${BESTEFFORT:+ (best-effort raster issues:$BESTEFFORT)}"
