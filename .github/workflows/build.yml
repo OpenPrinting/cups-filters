@@ -1,9 +1,12 @@
 # Multi-Architecture / multi-CUPS Build and Test Workflow for cups-filters
 #
-# Matrix: 4 architectures x 3 CUPS releases = 12 combinations.
+# Matrix: 4 architectures x 2 CUPS releases = 8 combinations.
 #   architectures: x86_64, arm64 (native runners); armv7, riscv64 (QEMU)
-#   CUPS releases: 2.4.x (distro libcups2-dev), 2.5.x (OpenPrinting/cups
-#                  master), 3.x (OpenPrinting/libcups master)
+#   CUPS releases: 2.4.x (distro libcups2-dev), 2.5.x (OpenPrinting/cups master)
+# CUPS 3.x / libcups3 is intentionally NOT tested: cups-filters is a
+# compatibility layer that exposes libcupsfilters' filter functions as classic
+# CUPS filters, and CUPS 3.x has no filter/backend-executable concept, so
+# cups-filters has no meaning there (confirmed by Till Kamppeter).
 # All the per-combination work lives in ci/ci-setup.sh so the legs differ only
 # in which CUPS is provided and whether they run under emulation.  Each leg
 # builds pdfio + libcupsfilters + libppd against the selected CUPS, then
@@ -29,7 +32,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, arm64, armv7, riscv64]
-        cups: [system-2x, source-2.5.x, source-3.x]
+        cups: [system-2x, source-2.5.x]
         include:
           - arch: x86_64
             runs-on: ubuntu-latest
@@ -46,14 +49,8 @@ jobs:
 
     runs-on: ${{ matrix.runs-on }}
     name: Build & Test (${{ matrix.arch }}, ${{ matrix.cups }})
-    # Building CUPS 2.5 / libcups3 from source under QEMU is slow; allow plenty.
+    # Building CUPS 2.5 from source under QEMU is slow; allow plenty.
     timeout-minutes: 360
-    # The libcups3 (CUPS 3.x) leg is not yet gating: cups-filters has not been
-    # ported to libcups3 (the classic backends include the removed
-    # cups/backend.h and foomatic-rip uses the libcups2 cups-array API names).
-    # Keep the leg visible but non-blocking until the port approach is agreed
-    # upstream; the 2.4.x and 2.5.x legs gate as normal.
-    continue-on-error: ${{ matrix.cups == 'source-3.x' }}
 
     steps:
       - uses: actions/checkout@v4

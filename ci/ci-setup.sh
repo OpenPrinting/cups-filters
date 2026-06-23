@@ -2,17 +2,17 @@
 # ci/ci-setup.sh
 #
 # CI helper for building cups-filters against several CUPS releases on both
-# native and QEMU-emulated runners.  The same source compiles against CUPS
-# 2.4.x, 2.5.x and 3.x; this script provides each of those CUPS builds, then
-# builds the dependency stack (pdfio, libcupsfilters, libppd) and finally
-# cups-filters itself against it.
+# native and QEMU-emulated runners.  cups-filters is a CUPS 2.x compatibility
+# layer (classic filters), so it targets CUPS 2.4.x and 2.5.x only -- NOT
+# CUPS 3.x/libcups3, which has no filter-executable concept.  This script
+# provides each CUPS build, then the dependency stack (pdfio, libcupsfilters,
+# libppd) and finally cups-filters itself against it.
 #
 # Subcommands:
 #   deps                  install build dependencies
 #   cups <kind>           provide libcups; <kind> is one of:
 #                           system-2x    distro libcups2-dev  (CUPS 2.4.x)
 #                           source-2.5.x OpenPrinting/cups@master    (CUPS 2.5.x)
-#                           source-3.x   OpenPrinting/libcups@master (libcups3)
 #   pdfio                 build/install the latest released pdfio
 #   libcupsfilters <kind> provide libcupsfilters: distro pkg on system-2x,
 #                         OpenPrinting/libcupsfilters@master on the source legs
@@ -97,10 +97,6 @@ cmd_cups() {
 			# (CUPS otherwise installs into /usr/lib64 on 64-bit hosts).
 			build_autoconf https://github.com/OpenPrinting/cups.git master "" \
 				--disable-systemd ${ma:+--libdir=/usr/lib/$ma}
-			;;
-		source-3.x)
-			build_autoconf https://github.com/OpenPrinting/libcups.git master \
-				"--recurse-submodules"
 			;;
 		*)
 			echo "ci-setup: unknown cups kind: $kind" >&2; exit 2 ;;
