@@ -151,7 +151,7 @@ AC_SUBST(CUPS_SERVERBIN)
 # ========================
 PKG_CHECK_MODULES([LIBCUPSFILTERS], [libcupsfilters])
 
-======================
+# ======================
 # Check for libjxl (JPEG-XL)
 # ======================
 PKG_CHECK_MODULES([LIBJXL], [libjxl >= 0.7.0],
