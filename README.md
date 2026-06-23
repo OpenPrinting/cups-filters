@@ -158,8 +158,8 @@ Algorithms available:
       Angle=105 (Cyan), 165 (Magenta), 30 (Yellow), 45 (Black), 37 (def),  
       Spot Function=CosineDot
 * `-o halftone-type=dithering`, forces 8x8 ordered dithering
-* `-o halftone-type=genordered[-frequency][-angle][-dotshape]`
-* `-o halftone-type=spot[-frequency][-angle][-dotshape]`
+* `-o halftone-type=genordered[-frequency][-angle][-dotshape][-gamma]`
+* `-o halftone-type=spot[-frequency][-angle][-dotshape][-gamma]`
 
 genordered is a halftone+ordered dithering algorithm,  
   frequency - line-per-inch, number of halftone cells per inch.  
@@ -169,10 +169,11 @@ genordered is a halftone+ordered dithering algorithm,
   angle - screen orientation, in degrees.  
   dotshape - one of:  
     0=CIRCLE, 1=REDBOOK, 2=INVERTED, 3=RHOMBOID, 4=LINE_X, 5=LINE_Y,  
-    6=DIAMOND1, 7=DIAMOND2, 8=ROUNDSPOT
+    6=DIAMOND1, 7=DIAMOND2, 8=ROUNDSPOT  
+  gamma - value from 1 to 99, fraction of exponent gamma (pix ^ 0.xx)
 
 spot is a halftone algorithm from PDF specification,  
-  frequency, angle - same as for genordered  
+  frequency, angle, gamma - same as for genordered  
   dotshape - one of:  
     0=SimpleDot 1=InvertedSimpleDot 2=DoubleDot 3=InvertedDoubleDot  
     4=CosineDot 5=Double 6=InvertedDouble 7=Line 8=LineX 9=LineY 10=Round  
