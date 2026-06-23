@@ -698,7 +698,7 @@ main (int argc, char **argv, char *envp[])
   int pxlcolor = 1;
   cups_halftone_type_t halftonetype = HALFTONE_DEFAULT;
   char *halftone_tmp = NULL;
-  int ht_frequency = 133, ht_angle = 45, ht_dotshape = 0;
+  int ht_frequency = 133, ht_angle = 45, ht_dotshape = 0, ht_gamma = 0;
 #ifdef HAVE_CUPS_1_7
   int pwgraster = 0;
   ppd_attr_t *attr;
@@ -1060,7 +1060,12 @@ main (int argc, char **argv, char *envp[])
           if (*p == '-') {
             p++;
             v = strtol(p, &endp, 10);
-            if (endp != p) ht_dotshape = (int)v;
+            if (endp != p) { ht_dotshape = (int)v; p = endp; }
+            if (*p == '-') {
+              p++;
+              v = strtol(p, &endp, 10);
+              if (endp != p) ht_gamma = (int)v;
+            }
           }
         }
       }
@@ -1081,7 +1086,12 @@ main (int argc, char **argv, char *envp[])
           if (*p == '-') {
             p++;
             v = strtol(p, &endp, 10);
-            if (endp != p) ht_dotshape = (int)v;
+            if (endp != p) { ht_dotshape = (int)v; p = endp; }
+            if (*p == '-') {
+              p++;
+              v = strtol(p, &endp, 10);
+              if (endp != p) ht_gamma = (int)v;
+            }
           }
         }
       }
@@ -1222,11 +1232,15 @@ main (int argc, char **argv, char *envp[])
    * 0=CIRCLE, 1=REDBOOK, 2=INVERTED, 3=RHOMBOID, 4=LINE_X, 5=LINE_Y,
    * 6=DIAMOND1, 7=DIAMOND2, 8=ROUNDSPOT */
   if (halftonetype == HALFTONE_GENORDERED) {
-    fprintf(stderr, "DEBUG: Ghostscript using .genordered halftone (frequency=%d angle=%d dotshape=%d).\n",
-	    ht_frequency, ht_angle, ht_dotshape);
+    char ht_transfer[16] = {0};
+    if (ht_gamma >= 1 && ht_gamma <= 99)
+      snprintf(ht_transfer, sizeof(ht_transfer), "0.%02d exp", ht_gamma);
+    fprintf(stderr, "DEBUG: Ghostscript using .genordered halftone (frequency=%d angle=%d dotshape=%d gamma=%s).\n",
+	    ht_frequency, ht_angle, ht_dotshape,
+	    ht_transfer[0] ? ht_transfer : "default");
     snprintf(tmpstr, sizeof(tmpstr),
-             "<< /Frequency %d /Angle %d /DotShape %d >> .genordered /Default exch /Halftone defineresource sethalftone { } settransfer 0.003 setsmoothness",
-	     ht_frequency, ht_angle, ht_dotshape);
+	     "<< /Frequency %d /Angle %d /DotShape %d >> .genordered /Default exch /Halftone defineresource sethalftone { %s } settransfer 0.003 setsmoothness",
+	     ht_frequency, ht_angle, ht_dotshape, ht_transfer);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
@@ -1235,13 +1249,17 @@ main (int argc, char **argv, char *envp[])
    * Spot functions are from PDF specification, see ht_spot_functions array. */
   if (halftonetype == HALFTONE_SPOT) {
     int shape = ht_dotshape;
+    char ht_transfer[16] = {0};
     if (shape < 0) shape = 0;
+    if (ht_gamma >= 1 && ht_gamma <= 99)
+      snprintf(ht_transfer, sizeof(ht_transfer), "0.%02d exp", ht_gamma);
     if (shape >= HT_SPOT_FUNCTIONS_COUNT) shape = HT_SPOT_FUNCTIONS_COUNT - 1;
-    fprintf(stderr, "DEBUG: Ghostscript using Spot halftone (frequency=%d angle=%d dotshape=%d).\n",
-	    ht_frequency, ht_angle, shape);
+    fprintf(stderr, "DEBUG: Ghostscript using Spot halftone (frequency=%d angle=%d dotshape=%d gamma=%s).\n",
+	    ht_frequency, ht_angle, shape,
+	    ht_transfer[0] ? ht_transfer : "default");
     snprintf(tmpstr, sizeof(tmpstr),
-             "<< /HalftoneType 1 /Frequency %d /Angle %d /SpotFunction %s >> /Default exch /Halftone defineresource sethalftone",
-	     ht_frequency, ht_angle, ht_spot_functions[shape]);
+	     "<< /HalftoneType 1 /Frequency %d /Angle %d /SpotFunction %s >> /Default exch /Halftone defineresource sethalftone { %s } settransfer 0.003 setsmoothness",
+	     ht_frequency, ht_angle, ht_spot_functions[shape], ht_transfer);
     cupsArrayAdd(gs_args, strdup(tmpstr));
   }
 
