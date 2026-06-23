@@ -66,11 +66,17 @@ jobs:
         run: |
           set -ex
           
-          # Clone and build pdfio (v1.6.2)
+          # Build the latest RELEASED PDFio. libcupsfilters tracks the newest
+          # PDFio, so pinning a version goes stale and breaks the build the
+          # moment libcupsfilters bumps its requirement. Resolving the newest
+          # release tag dynamically keeps this in lock-step automatically.
           cd /tmp
-          wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
-          tar -xzf pdfio-1.6.2.tar.gz
-          cd pdfio-1.6.2
+          PDFIO_VER=$(git ls-remote --tags --refs https://github.com/michaelrsweet/pdfio.git \
+            | sed 's#.*/v##' | sort -V | tail -1)
+          echo "Building PDFio $PDFIO_VER (latest release)"
+          wget -q "https://github.com/michaelrsweet/pdfio/releases/download/v${PDFIO_VER}/pdfio-${PDFIO_VER}.tar.gz"
+          tar -xzf "pdfio-${PDFIO_VER}.tar.gz"
+          cd "pdfio-${PDFIO_VER}"
           ./configure --prefix=/usr --enable-shared
           make all
           sudo make install
@@ -151,11 +157,16 @@ jobs:
             set -ex
             export REPO_DIR="/workspace"
 
-            # Build pdfio (v1.6.2)
+            # Build the latest RELEASED PDFio (see the native job for rationale):
+            # pinning a version goes stale when libcupsfilters bumps its
+            # requirement, so resolve the newest release tag dynamically.
             cd /tmp
-            wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
-            tar -xzf pdfio-1.6.2.tar.gz
-            cd pdfio-1.6.2
+            PDFIO_VER=$(git ls-remote --tags --refs https://github.com/michaelrsweet/pdfio.git \
+              | sed 's#.*/v##' | sort -V | tail -1)
+            echo "Building PDFio $PDFIO_VER (latest release)"
+            wget -q "https://github.com/michaelrsweet/pdfio/releases/download/v${PDFIO_VER}/pdfio-${PDFIO_VER}.tar.gz"
+            tar -xzf "pdfio-${PDFIO_VER}.tar.gz"
+            cd "pdfio-${PDFIO_VER}"
             ./configure --prefix=/usr --enable-shared
             make all
             make install
