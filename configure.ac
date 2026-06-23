@@ -73,42 +73,76 @@ AC_ARG_WITH([fontdir],
 )
 AC_SUBST(FONTDIR)
 
-# ================================
-# Find CUPS internals (no pc file)
-# ================================
+# =====================================
+# Find CUPS (pkg-config or cups-config)
+# =====================================
+# CUPS provides cups-config only up to 2.4.x.  CUPS 2.5.x ships cups.pc and
+# libcups3 ships cups3.pc, both having dropped cups-config.  Detect CUPS via
+# pkg-config first (cups3, then cups) and fall back to cups-config, deriving
+# the install locations from the pkg-config prefix.  cups-config can still be
+# forced with --with-cups-config=PATH.
 AC_ARG_WITH([cups-config],
 	[AS_HELP_STRING([--with-cups-config=path], [Specify path to cups-config executable.])],
 	[with_cups_config="$withval"],
 	[with_cups_config=system]
 )
 
-AS_IF([test "x$with_cups_config" != "xsystem"], [
-	CUPSCONFIG=$with_cups_config
+AC_MSG_CHECKING([for CUPS library v3.0 or higher])
+AS_IF([test "x$with_cups_config" = "xsystem" && $PKG_CONFIG --exists cups3], [
+	CUPS_VERSION="$($PKG_CONFIG --modversion cups3)"
+	AC_MSG_RESULT([yes, v$CUPS_VERSION])
+	CUPS_CFLAGS="$($PKG_CONFIG --cflags cups3)"
+	CUPS_LIBS="$($PKG_CONFIG --libs cups3)"
+	cups_pc=cups3
+], [test "x$with_cups_config" = "xsystem" && $PKG_CONFIG --exists cups], [
+	AC_MSG_RESULT([no])
+	AC_MSG_CHECKING([for CUPS library v2.5 via pkg-config])
+	CUPS_VERSION="$($PKG_CONFIG --modversion cups)"
+	AC_MSG_RESULT([yes, v$CUPS_VERSION])
+	CUPS_CFLAGS="$($PKG_CONFIG --cflags cups)"
+	CUPS_LIBS="$($PKG_CONFIG --libs cups)"
+	cups_pc=cups
 ], [
-	AC_PATH_TOOL(CUPSCONFIG, [cups-config])
-	AS_IF([test -z "$CUPSCONFIG"], [
-		AC_MSG_ERROR([Required cups-config is missing. Please install CUPS developer packages.])
+	AC_MSG_RESULT([no])
+	AS_IF([test "x$with_cups_config" != "xsystem"], [
+		CUPSCONFIG=$with_cups_config
+	], [
+		AC_PATH_TOOL(CUPSCONFIG, [cups-config])
+		AS_IF([test -z "$CUPSCONFIG"], [
+			AC_MSG_ERROR([Required cups-config is missing. Please install CUPS developer packages.])
+		])
 	])
+	cups_pc=""
+	CUPS_CFLAGS=`$CUPSCONFIG --cflags`
+	CUPS_LIBS=`$CUPSCONFIG --image --libs`
+	CUPS_VERSION=`$CUPSCONFIG --version`
 ])
-CUPS_CFLAGS=`$CUPSCONFIG --cflags`
-CUPS_LIBS=`$CUPSCONFIG --image --libs`
-CUPS_VERSION=`$CUPSCONFIG --version`
 AC_SUBST(CUPS_CFLAGS)
 AC_SUBST(CUPS_LIBS)
 
-CUPS_DATADIR="`$CUPSCONFIG --datadir`"
+# Install locations: derived from the pkg-config prefix for source CUPS, or
+# from cups-config for 2.4.x.
+AS_IF([test -n "$cups_pc"], [
+	cups_prefix="$($PKG_CONFIG --variable=prefix $cups_pc)"
+	CUPS_DATADIR="$cups_prefix/share/cups"
+	AS_IF([test "x$cups_prefix" = "x/usr"], [
+		CUPS_SERVERROOT="/etc/cups"
+	], [
+		CUPS_SERVERROOT="$cups_prefix/etc/cups"
+	])
+	CUPS_SERVERBIN="$cups_prefix/lib/cups"
+], [
+	CUPS_DATADIR="`$CUPSCONFIG --datadir`"
+	CUPS_SERVERROOT="`$CUPSCONFIG --serverroot`"
+	CUPS_SERVERBIN="`$CUPSCONFIG --serverbin`"
+])
 AC_DEFINE_UNQUOTED(CUPS_DATADIR, "$CUPS_DATADIR", [CUPS datadir])
 AC_SUBST(CUPS_DATADIR)
-
-CUPS_SERVERROOT="`$CUPSCONFIG --serverroot`"
 AC_DEFINE_UNQUOTED(CUPS_SERVERROOT, "$CUPS_SERVERROOT", [CUPS serverroot])
 AC_SUBST(CUPS_SERVERROOT)
-
 CUPS_FONTPATH="$CUPS_DATADIR/fonts"
 AC_DEFINE_UNQUOTED(CUPS_FONTPATH, "$CUPS_FONTPATH", [Path to CUPS fonts dir])
 AC_SUBST(CUPS_FONTPATH)
-
-CUPS_SERVERBIN="`$CUPSCONFIG --serverbin`"
 AC_DEFINE_UNQUOTED(CUPS_SERVERBIN, "$CUPS_SERVERBIN", [Path to CUPS binaries dir])
 AC_SUBST(CUPS_SERVERBIN)
 
