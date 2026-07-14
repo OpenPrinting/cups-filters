@@ -225,8 +225,16 @@ init_direct(list_t *arglist,
   char tmp [1024];
   listitem_t *i;
   char user_default_path [PATH_MAX];
-
-  strlcpy(user_default_path, getenv("HOME"), 256);
+  
+  char *home = getenv("HOME");
+  if (home)
+    strlcpy(user_default_path, home, 256);
+  else
+  {
+    _log("HOME environment variable not set; using current directory for Foomatic user defaults.\n");
+    strlcpy(user_default_path, ".", 256);
+  }
+  
   strlcat(user_default_path, "/.foomatic/", 256);
 
   // Which files do we want to print?
