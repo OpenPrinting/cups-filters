@@ -423,7 +423,7 @@ assure_option(const char *name)
     strlcpy(opt->name, name, 128);
 
   // set varname
-  strcpy(opt->varname, opt->name);
+  strlcpy(opt->varname, opt->name, sizeof(opt->varname));
   strrepl(opt->varname, "-/.", '_');
 
   // Default execution style is 'G' (PostScript) since all arguments for
@@ -2463,8 +2463,9 @@ build_commandline(int optset,
     {
       if (isempty(userval))
 	continue;
-      s = malloc(strlen(opt->name) + strlen(userval) + 20);
-      sprintf(s, "%s=%s %%Y", opt->name, userval);
+      size_t s_size = strlen(opt->name) + strlen(userval) + 20;
+      s = malloc(s_size);
+      snprintf(s, s_size, "%s=%s %%Y", opt->name, userval);
       dstrreplace(cmdline, "%Y", s, 0);
       free(s);
     }

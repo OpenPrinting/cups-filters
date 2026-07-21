@@ -850,7 +850,7 @@ dstrcpy(dstr_t *ds,
     ds->data = realloc(ds->data, ds->alloc);
   }
 
-  strcpy(ds->data, src);
+  memcpy(ds->data, src, srclen + 1);
   ds->len = srclen;
 }
 
