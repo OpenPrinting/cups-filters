@@ -2156,6 +2156,18 @@ read_ppd_file(const char *filename)
     else if (current_opt && !strcmp(key, current_opt->name))
     {
       // *<option> <choice>[/translation]: <code>
+      if (current_opt->style == 'C' &&
+	  !is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+	cupsArrayDelete(known_hashes);
+	fclose(fh);
+
+	rip_die(EXIT_PRNERR_NOTALLOWED,
+		"ERROR: The value of option %s choice %s is not among "
+		"the allowed values - see foomatic-rip man page for "
+		"more instructions.\n", key, name);
+      }
+
       option_set_choice(current_opt, name, text, value->data);
     }
     else if (!strcmp(key, "FoomaticRIPOptionSetting"))

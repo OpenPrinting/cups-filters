@@ -23,7 +23,7 @@ foomatic-hash - tool for scanning provided drivers for problematic PPD options a
 
 .SH "DESCRIPTION"
 
-The tool scans the provided drivers for values of PPD keywords \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR, and \fBFoomaticRIPOptionSetting\fR, puts the found values into a file for review, and prints out values hashes in hexadecimal format. The hashes are required for allowing the filter \fBfoomatic-rip\fR to process those values.
+The tool scans the provided drivers for values of PPD keywords \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR, \fBFoomaticRIPOptionSetting\fR, and standard PPD option values for CmdLine-type options declared via \fBFoomaticRIPOption\fR. It puts the found values into a file for review and prints out value hashes in hexadecimal format. The hashes are required for allowing the filter \fBfoomatic-rip\fR to process those values.
 
 
 .SH "OPTIONS"

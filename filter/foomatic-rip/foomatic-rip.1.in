@@ -195,10 +195,11 @@ modern shell like \fBbash\fR, \fBzsh\fR, or \fBksh\fR.
 
 .SH PPD OPTION VALUE RESTRICTIONS AND EXCEPTIONS
 
-The values of PPD options \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR and \fBFoomaticRIPOptionSetting\fR
+The values of PPD options \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR, \fBFoomaticRIPOptionSetting\fR
+and standard PPD option values for CmdLine-type options declared via \fBFoomaticRIPOption\fR
 are rejected in the default configuration because of security implications. Users can use the tool \fBfoomatic-hash(1)\fR, which provides
 values of affected PPD options from found drivers and hashes of those values in hexadecimal format. User is expected to review the found values,
-and if there is nothing suspicious in the output, copy the file with hashes into into the directory \fB@sysconfdir@/foomatic/hashes.d\fR
+and if there is nothing suspicious in the output, copy the file with hashes into the directory \fB@sysconfdir@/foomatic/hashes.d\fR
 to allow the exceptions for found values.
 
 

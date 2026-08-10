@@ -11,7 +11,8 @@
 // The options in question:
 // - FoomaticRIPCommandLine,
 // - FoomaticRIPCommandLinePDF,
-// - FoomaticRIPOptionSetting.
+// - FoomaticRIPOptionSetting,
+// - standard PPD option values for CmdLine-type options defined by FoomaticRIPOption.
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -131,11 +132,11 @@ generate_hash_file(cups_array_t *values, // I - File with values to hash
 
 //
 // `find_foomaticrip_keywords()` - reads PPD file, find FoomaticRIPCommandLine,
-// FoomaticRIPCommandLinePDF and FoomaticRIPOptionSetting, save their values
-// into CUPS array.
+// FoomaticRIPCommandLinePDF, FoomaticRIPOptionSetting and standard PPD option
+// values for CmdLine-type options, save their values into CUPS array.
 //
 
-void
+int					      // O - 0 on success, 1 on error
 find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of FoomaticRIP* PPD keywords
 			  cups_file_t  *file) // I - File descriptor opened via CUPS API
 {
@@ -143,7 +144,9 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
   char key[128],			      // PPD keyword
        line[256],			      // PPD line length is max 255 (excl. \0)
        name[64],			      // PPD option name
-       text[64];			      // PPD option human-readable text
+       text[64],			      // PPD option human-readable text
+       style[16];			      // FoomaticRIPOption style field
+  cups_array_t *cmdline_opts = NULL;	      // Option names declared as CmdLine
 
   //
   // Allocate struct for saving value data dynamically,
@@ -153,6 +156,19 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
   dstr_t *value = create_dstr();
 
   dstrassure(value, 256);
+
+  //
+  // Track option names declared as CmdLine via FoomaticRIPOption...
+  //
+
+  if ((cmdline_opts = cupsArrayNew3((cups_array_func_t)strcmp, NULL, NULL, 0,
+				    (cups_acopy_func_t)strdup,
+				    (cups_afree_func_t)free)) == NULL)
+  {
+    fprintf(stderr, "Cannot allocate memory for CmdLine option tracking.\n");
+    free_dstr(value);
+    return (1);
+  }
 
   //
   // Going through the PPD file...
@@ -244,10 +260,29 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
     }
 
     //
+    // If this is a FoomaticRIPOption declaration, check whether it defines
+    // a CmdLine-type option and remember the option name for later...
+    //
+
+    if (!strcmp(key, "FoomaticRIPOption"))
+    {
+      style[0] = '\0';
+      sscanf(value->data, "%*s %15s", style);
+
+      if (!strcmp(style, "CmdLine") && name[0])
+	cupsArrayAdd(cmdline_opts, name);
+
+      continue;
+    }
+
+    //
     // Skip if the key is not what we look for...
     //
 
-    if (strcmp(key, "FoomaticRIPCommandLine") && strcmp(key, "FoomaticRIPCommandLinePDF") && strcmp(key, "FoomaticRIPOptionSetting"))
+    if (strcmp(key, "FoomaticRIPCommandLine") &&
+	strcmp(key, "FoomaticRIPCommandLinePDF") &&
+	strcmp(key, "FoomaticRIPOptionSetting") &&
+	!cupsArrayFind(cmdline_opts, key))
       continue;
 
     //
@@ -289,7 +324,10 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
       cupsArrayAdd(data, value->data);
   }
 
+  cupsArrayDelete(cmdline_opts);
   free_dstr(value);
+
+  return (0);
 }
 
 
@@ -314,7 +352,7 @@ get_values_from_ppd(cups_array_t *data,     // O - Array of found FoomaticRIP* v
     return (1);
   }
 
-  find_foomaticrip_keywords(data, file);
+  ret = find_foomaticrip_keywords(data, file);
 
   cupsFileClose(file);
 
@@ -445,7 +483,11 @@ get_values_from_ppdpaths(cups_array_t *data,     // O - Array of found values
     if ((ppdfile = ppdCollectionGetPPD(ppd->record.name, ppd_collections, NULL, NULL)) == NULL)
       continue;
 
-    find_foomaticrip_keywords(data, ppdfile);
+    if ((ret = find_foomaticrip_keywords(data, ppdfile)))
+    {
+      cupsFileClose(ppdfile);
+      goto end;
+    }
 
     cupsFileClose(ppdfile);
   }
@@ -475,9 +517,10 @@ help()
 	 "foomatic-hash --ppd <ppdfile> <scanoutput> <hashes_file>\n"
 	 "foomatic-hash --ppd-paths <path1,path2...pathN> <scanoutput> <hashes_file>\n"
 	 "\n"
-	 "Finds values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine\n"
-	 "and FoomaticRIPOptionSetting from the specified PPDs, appends them\n"
-	 "into the specified scan output for review, and hashes the found values.\n"
+	 "Finds values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine,\n"
+	 "FoomaticRIPOptionSetting and standard PPD option values for CmdLine-type\n"
+	 "options (declared via FoomaticRIPOption) from the specified PPDs, appends\n"
+	 "them into the specified scan output for review, and hashes the found values.\n"
 	 "\n"
 	 "--ppd <ppdfile>                   - PPD file to read\n"
 	 "--ppd-paths <path1,path2...pathN> - Paths to look for PPDs, available only with libppd\n"
@@ -530,8 +573,8 @@ main(int argc,
   }
 
   //
-  // Write found values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine and FoomaticRIPOptionSetting
-  // PPD keywords...
+  // Write found values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine,
+  // FoomaticRIPOptionSetting and CmdLine option values...
   //
 
   write_array(data, argv[3]);
