@@ -440,6 +440,12 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
       if (!DitherLuts[plane])
         DitherLuts[plane] = cfLutNew(2, default_lut, logfunc, ld);
 
+      if (!DitherLuts[plane])
+      {
+	fputs("ERROR: Unable to allocate dither lookup table\n", stderr);
+	exit(1);
+      }
+
       if (DitherLuts[plane][4095].pixel > 1)
 	DotBits[plane] = 2;
       else
