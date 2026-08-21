@@ -94,6 +94,7 @@ void	Setup(ppd_file_t *);
 void	StartPage(ppd_file_t *, cups_page_header2_t *);
 void	EndPage(ppd_file_t *, cups_page_header2_t *);
 void	Shutdown(ppd_file_t *);
+static int	GetPrinterTop(ppd_file_t *, cups_page_header2_t *);
 
 void	AddBand(cups_weave_t *band);
 void	CancelJob(int sig);
@@ -120,6 +121,30 @@ Setup(ppd_file_t *ppd)		// I - PPD file
 
   if (ppd->model_number & ESCP_USB)
     cfWritePrintData("\000\000\000\033\001@EJL 1284.4\n@EJL     \n\033@", 29);
+}
+
+
+//
+// 'GetPrinterTop()' - Get the selected page size's top margin in device
+//                     units.
+//
+
+static int
+GetPrinterTop(ppd_file_t         *ppd,	// I - PPD file
+              cups_page_header2_t *header) // I - Page header
+{
+  ppd_size_t	*size;			// Selected page size
+
+
+  if (!ppd || !header)
+    return (0);
+
+  // Use the currently selected/default PageSize instead of assuming a
+  // particular entry exists in ppd->sizes[].
+  if ((size = ppdPageSize(ppd, NULL)) == NULL)
+    return (0);
+
+  return ((int)((size->length - size->top) * header->HWResolution[1] / 72.0));
 }
 
 
@@ -729,8 +754,7 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   // Set the top and bottom margins...
   //
 
-  PrinterTop = (int)((ppd->sizes[1].length - ppd->sizes[1].top) *
-                     header->HWResolution[1] / 72.0);
+  PrinterTop = GetPrinterTop(ppd, header);
 
   if (ppd->model_number & ESCP_EXT_MARGINS)
   {

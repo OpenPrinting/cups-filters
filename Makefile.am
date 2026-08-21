@@ -236,14 +236,22 @@ pkgfilter_PROGRAMS += \
 endif
 
 check_PROGRAMS = \
-	test-external
+	test-external \
+	test-rastertopclx-format-string \
+	test-rastertoescpx-page-size
+
+TESTS = \
+	test-rastertopclx-format-string \
+	test-rastertoescpx-page-size
 
 # Not reliable bash script
 #TESTS += filter/test.sh
 
 EXTRA_DIST += \
 	$(genfilterscripts) \
-	filter/test.sh
+	filter/test.sh \
+	filter/test-rastertopclx-format-string.c \
+	filter/test-rastertoescpx-page-size.c
 
 bannertopdf_SOURCES = \
 	filter/bannertopdf.c
@@ -588,6 +596,31 @@ test_external_LDADD = \
 	$(LIBCUPSFILTERS_LIBS) \
 	$(LIBPPD_LIBS) \
 	$(CUPS_LIBS)
+
+test_rastertopclx_format_string_SOURCES = \
+	filter/test-rastertopclx-format-string.c \
+	filter/pcl-common.c
+test_rastertopclx_format_string_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(LIBPNG_CFLAGS) \
+	$(LIBCUPSFILTERS_CFLAGS) \
+	$(LIBPPD_CFLAGS)
+test_rastertopclx_format_string_LDADD = \
+	$(CUPS_LIBS) \
+	$(LIBPNG_LIBS) \
+	$(LIBCUPSFILTERS_LIBS) \
+	$(LIBPPD_LIBS)
+
+test_rastertoescpx_page_size_SOURCES = \
+	filter/test-rastertoescpx-page-size.c
+test_rastertoescpx_page_size_CFLAGS = \
+	$(CUPS_CFLAGS) \
+	$(LIBCUPSFILTERS_CFLAGS) \
+	$(LIBPPD_CFLAGS)
+test_rastertoescpx_page_size_LDADD = \
+	$(CUPS_LIBS) \
+	$(LIBCUPSFILTERS_LIBS) \
+	$(LIBPPD_LIBS)
 
 # =========
 # Man pages
