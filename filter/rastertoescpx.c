@@ -28,6 +28,8 @@
 #include <cupsfilters/driver.h>
 #include <ppd/ppd.h>
 #include "escp.h"
+#include <limits.h>
+#include <stdint.h>
 #include <signal.h>
 #include <string.h>
 #include <ctype.h>
@@ -144,6 +146,9 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
 					// Resolution string
 		spec[PPD_MAX_NAME];	// PPD attribute name
   ppd_attr_t	*attr;			// Attribute from PPD file
+  int		black_row_count,	// PPD black-head row count
+		black_row_step;		// PPD black-head row step
+  size_t	comp_buffer_size;	// Size of compression buffer
   const float	default_lut[2] =	// Default dithering lookup table
 		{
 		  0.0,
@@ -836,6 +841,43 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
       DotColStep ++;
   }
 
+  if (DotRowCount < 1 || DotRowStep < 1 || DotColStep < 1)
+  {
+    fputs("ERROR: Invalid ESC/P row geometry\n", stderr);
+    exit(1);
+  }
+
+  if ((DotRowCount > 1 || DotRowStep > 1) && PrinterPlanes == 1 &&
+      (attr = ppdFindAttr(ppd, "cupsESCPBlack", resolution)) != NULL &&
+      attr->value)
+  {
+    //
+    // Apply custom black head data before deriving buffer sizes and the
+    // softweave schedule.
+    //
+
+    if (sscanf(attr->value, "%d%d", &black_row_count, &black_row_step) != 2)
+    {
+      fprintf(stderr, "ERROR: Invalid cupsESCPBlack value \"%s\"\n",
+              attr->value);
+      exit(1);
+    }
+
+    DotRowCount = black_row_count;
+    DotRowStep  = black_row_step;
+  }
+
+  if (DotRowCount < 1 || DotRowStep < 1 ||
+      DotRowCount > INT_MAX / DotRowStep ||
+      ((DotRowCount > 1 || DotRowStep > 1) &&
+       ((size_t)DotColStep > sizeof(DotBands) / sizeof(DotBands[0]) ||
+        (size_t)DotRowStep >
+            sizeof(DotBands) / sizeof(DotBands[0]) / (size_t)DotColStep)))
+  {
+    fputs("ERROR: Invalid ESC/P row geometry\n", stderr);
+    exit(1);
+  }
+
   //
   // Setup softweave parameters...
   //
@@ -867,23 +909,7 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
 
     memset(DotRowOffset, 0, sizeof(DotRowOffset));
 
-    if (PrinterPlanes == 1)
-    {
-      //
-      // Use full height of print head...
-      //
-
-      if ((attr = ppdFindAttr(ppd, "cupsESCPBlack", resolution)) != NULL &&
-          attr->value)
-      {
-	//
-	// Use custom black head data...
-	//
-
-        sscanf(attr->value, "%d%d", &DotRowCount, &DotRowStep);
-      }
-    }
-    else if (ppd->model_number & ESCP_STAGGER)
+    if (PrinterPlanes > 1 && (ppd->model_number & ESCP_STAGGER))
     {
       //
       // Use staggered print head...
@@ -912,11 +938,16 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
 
     for (i = 0; i < bands; i ++)
     {
-      band         = (cups_weave_t *)calloc(1, sizeof(cups_weave_t));
+      band = (cups_weave_t *)calloc(1, sizeof(cups_weave_t));
+      if (band == NULL ||
+          (band->buffer = calloc(DotRowCount, DotBufferSize)) == NULL)
+      {
+        fputs("ERROR: Unable to allocate band buffer\n", stderr);
+        exit(1);
+      }
+
       band->next   = DotAvailList;
       DotAvailList = band;
-
-      band->buffer = calloc(DotRowCount, DotBufferSize);
     }
 
     if (!DotAvailList)
@@ -1050,7 +1081,19 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   if (RGB)
     CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes);
 
-  CompBuffer = malloc(10 * DotBufferSize * DotRowMax);
+  if (DotBufferSize <= 0 ||
+      (size_t)DotBufferSize > SIZE_MAX / 10 / (size_t)DotRowMax)
+  {
+    fputs("ERROR: Invalid ESC/P compression buffer size\n", stderr);
+    exit(1);
+  }
+
+  comp_buffer_size = 10 * (size_t)DotBufferSize * (size_t)DotRowMax;
+  if ((CompBuffer = malloc(comp_buffer_size)) == NULL)
+  {
+    fputs("ERROR: Unable to allocate compression buffer\n", stderr);
+    exit(1);
+  }
 }
 
 
