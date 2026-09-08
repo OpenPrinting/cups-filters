@@ -88,7 +88,7 @@ void            *ld;                    // Log function data
 // Prototypes...
 //
 
-void	StartPage(cf_filter_data_t *data, ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
+int	StartPage(cf_filter_data_t *data, ppd_file_t *ppd, cups_page_header2_t *header, int job_id,
 	          const char *user, const char *title, int num_options,
 		  cups_option_t *options);
 void	EndPage(ppd_file_t *ppd, cups_page_header2_t *header);
@@ -106,7 +106,7 @@ int	ReadLine(cups_raster_t *ras, cups_page_header2_t *header);
 // 'StartPage()' - Start a page of graphics.
 //
 
-void
+int					// O - 1 on success, 0 on failure
 StartPage(cf_filter_data_t      *data,	// I - filter data
 	  ppd_file_t         *ppd,	// I - PPD file
           cups_page_header2_t *header,	// I - Page header
@@ -387,6 +387,21 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
     }
 
     PrinterPlanes = CMYK->num_channels;
+
+    if (PrinterPlanes < 1 ||
+        PrinterPlanes > (int)(sizeof(DitherLuts) / sizeof(DitherLuts[0])))
+    {
+      fprintf(stderr, "ERROR: Unsupported number of PCL color planes: %d.\n",
+              PrinterPlanes);
+      cfCMYKDelete(CMYK);
+      CMYK = NULL;
+      if (RGB)
+      {
+        cfRGBDelete(RGB);
+        RGB = NULL;
+      }
+      return (0);
+    }
 
     //
     // Use dithered mode...
@@ -833,6 +848,7 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
   SeedInvalid = 1;
 
   fprintf(stderr, "BlankValue=%d\n", BlankValue);
+  return (1);
 }
 
 
@@ -1830,6 +1846,7 @@ main(int  argc,				// I - Number of command-line arguments
   int			y;		// Current line
   ppd_file_t		*ppd;		// PPD file
   int			job_id;		// Job ID
+  int			status = 0;	// Exit status
   int			num_options;	// Number of options
   cups_option_t		*options;	// Options
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
@@ -1952,8 +1969,12 @@ main(int  argc,				// I - Number of command-line arguments
     fprintf(stderr, "PAGE: %d %d\n", Page, header.NumCopies);
     fprintf(stderr, "INFO: Starting page %d.\n", Page);
 
-    StartPage(data, ppd, &header, atoi(argv[1]), argv[2], argv[3],
-              num_options, options);
+    if (!StartPage(data, ppd, &header, atoi(argv[1]), argv[2], argv[3],
+                   num_options, options))
+    {
+      status = 1;
+      break;
+    }
 
     for (y = 0; y < (int)header.cupsHeight; y ++)
     {
@@ -1994,7 +2015,7 @@ main(int  argc,				// I - Number of command-line arguments
       break;
   }
 
-  if (!empty)
+  if (!empty && !status)
     Shutdown(ppd, job_id, argv[2], argv[3], num_options, options);
 
   cupsFreeOptions(num_options, options);
@@ -2009,5 +2030,5 @@ main(int  argc,				// I - Number of command-line arguments
     fprintf(stderr, "DEBUG: Input is empty, outputting empty file.\n");
     return 0;
   }
-  return (Page == 0);
+  return (status || Page == 0);
 }
