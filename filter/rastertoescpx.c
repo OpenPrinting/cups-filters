@@ -834,6 +834,8 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
 
     if (DotColStep == 0)
       DotColStep ++;
+    if (DotRowStep == 0)
+      DotRowStep ++;
   }
 
   //
