@@ -229,6 +229,23 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   fprintf(stderr, "DEBUG: cupsRowStep = %d\n", header->cupsRowStep);
 
   //
+  // Reject unusable resolutions before they reach the unit-selection and
+  // page-geometry math below, which divides by HWResolution[0]/[1] and
+  // doubles an int against HWResolution[0] until it is no longer smaller
+  // (issues: zero resolution causes SIGFPE; a resolution near UINT_MAX
+  // overflows that doubling loop and never terminates).
+  //
+
+  if (header->HWResolution[0] == 0 || header->HWResolution[1] == 0 ||
+      header->HWResolution[0] > 100000 || header->HWResolution[1] > 100000)
+  {
+    fprintf(stderr,
+            "ERROR: Unsupported resolution [ %u %u ]; must be > 0 and <= 100000 dpi.\n",
+            header->HWResolution[0], header->HWResolution[1]);
+    exit(1);
+  }
+
+  //
   // Figure out the color model and spec strings...
   //
 
