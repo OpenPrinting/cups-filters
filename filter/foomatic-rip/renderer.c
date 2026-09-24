@@ -315,7 +315,7 @@ write_merged_jcl_options(FILE *stream,
 			 const char *jclstr)
 {
   char *p = strstr(original_opts[0], jclstr);
-  char header[128];
+  char *header = NULL;
   char **optsp1 = NULL, **optsp2 = NULL;
 
   // No JCL options in original_opts, just prepend opts
@@ -348,9 +348,15 @@ write_merged_jcl_options(FILE *stream,
   }
 
   // Write jcl header
-  strncpy(header, original_opts[0], p - original_opts[0]);
+  // The prefix before the JCL marker comes from the input document and can
+  // be arbitrarily long, so size the buffer to fit it instead of copying
+  // into a fixed-size one (was a stack buffer overflow for a long prefix).
+  header = malloc(p - original_opts[0] + 1);
+  memcpy(header, original_opts[0], p - original_opts[0]);
   header[p - original_opts[0]] = '\0';
   fprintf(stream, "%s", header);
+  free(header);
+  header = NULL;
 
   // Insert the JCL commands from the PPD file right before the first
   // "@PJL SET ..." line from the, if there are no "@PJL SET ..." lines,
