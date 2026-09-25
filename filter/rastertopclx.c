@@ -202,6 +202,22 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
     return (0);
   }
 
+  //
+  // Reject planar/banded RGB: the conversion path below (cfCMYKDoRGB, via
+  // ReadLine) reads PixelBuffer as chunked RGB (3 bytes/pixel across one
+  // decoded row), but a planar or banded page only has one color's worth of
+  // data per row, so the conversion reads past the row allocation.
+  //
+
+  if (header->cupsColorSpace == CUPS_CSPACE_RGB &&
+      header->cupsColorOrder != CUPS_ORDER_CHUNKED)
+  {
+    fprintf(stderr,
+            "ERROR: Unsupported cupsColorOrder %d for RGB; only CUPS_ORDER_CHUNKED is supported.\n",
+            header->cupsColorOrder);
+    return (0);
+  }
+
 #ifdef __APPLE__
   //
   // MacOS X 10.2.x doesn't set most of the page device attributes, so check
