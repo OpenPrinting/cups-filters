@@ -246,6 +246,22 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   }
 
   //
+  // Reject planar/banded RGB: the conversion path below (cfCMYKDoRGB, via
+  // ProcessLine) reads PixelBuffer as chunked RGB (3 bytes/pixel across one
+  // decoded row), but a planar or banded page only has one color's worth of
+  // data per row, so the conversion reads past the row allocation.
+  //
+
+  if (header->cupsColorSpace == CUPS_CSPACE_RGB &&
+      header->cupsColorOrder != CUPS_ORDER_CHUNKED)
+  {
+    fprintf(stderr,
+            "ERROR: Unsupported cupsColorOrder %d for RGB; only CUPS_ORDER_CHUNKED is supported.\n",
+            header->cupsColorOrder);
+    exit(1);
+  }
+
+  //
   // Figure out the color model and spec strings...
   //
 
