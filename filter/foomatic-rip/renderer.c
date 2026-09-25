@@ -224,8 +224,12 @@ read_jcl_lines(FILE *stream,
     result[cnt] = line;
     if (!strstr(line, jclstr))
       break;
-    // Remove newline from the end of a line containing JCL
-    result[cnt][*readbinarybytes - 1] = '\0';
+    // Remove newline from the end of a line containing JCL. A zero-length
+    // line (e.g. EOF with an empty jclstr, which vacuously matches via
+    // strstr) has nothing to remove; *readbinarybytes - 1 would underflow
+    // the unsigned size_t and write out of bounds.
+    if (*readbinarybytes > 0)
+      result[cnt][*readbinarybytes - 1] = '\0';
     cnt++;
   }
 
@@ -415,7 +419,11 @@ exec_kid4(FILE *in,
   // header with the one from the driver
   if (argv_count(jclprepend) > 0)
   {
-    if (!isspace(jclprepend[0][0]))
+    // jclprepend[0][0] == '\0' (an empty first JCL line) is not whitespace
+    // either, so it would otherwise slip through this guard and produce an
+    // empty jclstr below, which strstr() then matches against any line,
+    // including an empty one at EOF.
+    if (jclprepend[0][0] != '\0' && !isspace((unsigned char)jclprepend[0][0]))
     {
       char *jclstr, **jclheader;
       size_t pos;
