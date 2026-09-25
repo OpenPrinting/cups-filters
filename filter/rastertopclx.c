@@ -1157,8 +1157,8 @@ CompressData(unsigned char *line,	// I - Data to compress
 	    // The seed buffer is valid, so compare against it...
 	    //
 
-            while (*line_ptr == *seed &&
-                   line_ptr < line_end)
+            while (line_ptr < line_end &&
+                   *line_ptr == *seed)
             {
               line_ptr ++;
               seed ++;
