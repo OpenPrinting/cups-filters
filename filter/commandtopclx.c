@@ -101,9 +101,12 @@ main(int  argc,					// I - Number of command-line
     // Drop trailing newline...
     //
 
-    lineptr = line + strlen(line) - 1;
-    if (*lineptr == '\n')
-      *lineptr = '\0';
+    if (line[0])
+    {
+      lineptr = line + strlen(line) - 1;
+      if (*lineptr == '\n')
+        *lineptr = '\0';
+    }
 
     //
     // Skip leading whitespace...
