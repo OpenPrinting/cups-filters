@@ -185,6 +185,23 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
   fprintf(stderr, "DEBUG: cupsColorSpace = %d\n", header->cupsColorSpace);
   fprintf(stderr, "DEBUG: cupsCompression = %d\n", header->cupsCompression);
 
+  //
+  // Reject an RGB page whose declared row length is too short for chunked RGB: ReadLine()
+  // sizes PixelBuffer from cupsBytesPerLine, but the RGB conversion path (cfCMYKDoRGB(),
+  // called with cupsWidth) reads 3 bytes per pixel from it regardless of the header's actual
+  // channel/bit-depth geometry. A header that declares RGB with fewer color channels or bits
+  // per pixel than 24 bpp produces a short row, so the conversion reads past PixelBuffer.
+  //
+
+  if (header->cupsColorSpace == CUPS_CSPACE_RGB &&
+      header->cupsBytesPerLine < header->cupsWidth * 3)
+  {
+    fprintf(stderr,
+            "ERROR: cupsBytesPerLine (%d) is too short for RGB at cupsWidth %d (needs at least %d).\n",
+            header->cupsBytesPerLine, header->cupsWidth, header->cupsWidth * 3);
+    return (0);
+  }
+
 #ifdef __APPLE__
   //
   // MacOS X 10.2.x doesn't set most of the page device attributes, so check
