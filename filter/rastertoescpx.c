@@ -1012,6 +1012,15 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
 
     modrow = DotColStep * DotRowStep;
 
+    if (modrow < 1 || modrow > 128)
+    {
+      fprintf(stderr,
+              "ERROR: Unsupported row geometry: DotColStep (%d) * DotRowStep (%d) = %d, "
+              "must be between 1 and 128.\n",
+              DotColStep, DotRowStep, modrow);
+      exit(1);
+    }
+
     if (DotRowFeed == 0)
     {
       //
