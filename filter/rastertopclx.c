@@ -1772,13 +1772,24 @@ ReadLine(cups_raster_t      *ras,	// I - Raster stream
 {
   int	plane,				// Current color plane
 	width;				// Width of line
+  unsigned bytes_read;			// Bytes actually read into PixelBuffer
 
 
   //
   // Read raster data...
   //
 
-  cupsRasterReadPixels(ras, PixelBuffer, header->cupsBytesPerLine);
+  bytes_read = cupsRasterReadPixels(ras, PixelBuffer, header->cupsBytesPerLine);
+
+  //
+  // A short read leaves the tail of PixelBuffer uninitialized; emitting it
+  // would disclose residual heap bytes in the PCL output. Treat a truncated
+  // row the same as a blank one: skip it instead of processing undefined
+  // content.
+  //
+
+  if (bytes_read < header->cupsBytesPerLine)
+    return (0);
 
   //
   // See if it is blank; if so, return right away...
