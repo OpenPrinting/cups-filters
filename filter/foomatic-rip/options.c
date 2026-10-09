@@ -1995,6 +1995,18 @@ read_ppd_file(const char *filename)
     }
     else if (strcmp(key, "FoomaticRIPPostPipe") == 0)
     {
+      // no postpipe for CUPS, even if one is defined in the PPD file
+      if (spooler == SPOOLER_CUPS)
+	continue;
+
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+        cupsArrayDelete(known_hashes);
+        fclose(fh);
+
+        rip_die(EXIT_PRNERR_NOTALLOWED, "ERROR: The value of the key %s is not among the allowed values - see foomatic-rip man page for more instructions.\n", key);
+      }
+
       if (!postpipe)
 	postpipe = create_dstr();
       dstrassure(postpipe, value->len +128);
