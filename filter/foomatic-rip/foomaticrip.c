@@ -1183,10 +1183,6 @@ main(int argc,
   optionset_copy_values(optionset("default"), optionset("userval"));
   process_cmdline_options();
 
-  // no postpipe for CUPS , even if one is defined in the PPD file
-  if (spooler == SPOOLER_CUPS )
-    dstrclear(postpipe);
-
   if (postpipe->len)
     _log("Output will be redirected to:\n%s\n", postpipe);
 
