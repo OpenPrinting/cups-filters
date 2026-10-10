@@ -145,6 +145,9 @@ immediately after the data is transferred to the printer.
 directs your jobs to the LPD printer queue \fBlp\fR on the machine
 named \fBprintserver\fR.
 
+\fBfoomatic-rip\fR runs the PostPipe command only if its value has an allowed
+hash. See \fBPPD OPTION VALUE RESTRICTIONS AND EXCEPTIONS\fR below.
+
 See also http://www.openprinting.org/direct-doc.html
 
 .SH "PRINTING WITH SPOOLER"

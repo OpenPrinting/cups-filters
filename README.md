@@ -334,7 +334,10 @@ a path for drivers with affected values, and generates two files - the first
 with found values for admin to review, and the second with hashes of unique
 values present in the scanned file or path. If admin reviews the found values
 and finds them correct, the found values will be allowed once the file with
-hashes is moved into the directory /etc/foomatic/hashes.d.
+hashes is moved into the directory /etc/foomatic/hashes.d. foomatic-rip also
+checks the values of FoomaticRIPPostPipe and of CmdLine-type options declared
+via FoomaticRIPOption. FoomaticRIPPostPipe is ignored under CUPS, so it needs
+a hash only when you print without a spooler.
 
 The filter foomatic-rip reads files with allowed hashes from two directories -
 /etc/foomatic/hashes.d and /usr/share/foomatic/hashes.d. The former is meant
