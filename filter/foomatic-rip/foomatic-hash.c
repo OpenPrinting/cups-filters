@@ -247,18 +247,6 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
 
       dstrcat(value, line);
       dstrremovenewline(value);
-
-      //
-      // 2047 characters to read for value sounds reasonable,
-      // break if we have more and crop the string...
-      //
-
-      if (strlen(value->data) > 2047)
-      {
-	value->data[2047] = '\0';
-	value->len = 2047;
-	break;
-      }
     }
 
     //
