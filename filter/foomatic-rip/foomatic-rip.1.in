@@ -199,6 +199,7 @@ modern shell like \fBbash\fR, \fBzsh\fR, or \fBksh\fR.
 .SH PPD OPTION VALUE RESTRICTIONS AND EXCEPTIONS
 
 The values of PPD options \fBFoomaticRIPCommandLine\fR, \fBFoomaticRIPCommandLinePDF\fR, \fBFoomaticRIPOptionSetting\fR,
+\fBFoomaticRIPOptionPrototype\fR,
 \fBFoomaticRIPPostPipe\fR (ignored under CUPS)
 and standard PPD option values for CmdLine-type options declared via \fBFoomaticRIPOption\fR
 are rejected in the default configuration because of security implications. Users can use the tool \fBfoomatic-hash(1)\fR, which provides
