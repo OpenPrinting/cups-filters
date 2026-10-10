@@ -12,6 +12,7 @@
 // - FoomaticRIPCommandLine,
 // - FoomaticRIPCommandLinePDF,
 // - FoomaticRIPOptionSetting,
+// - FoomaticRIPOptionPrototype,
 // - FoomaticRIPPostPipe,
 // - standard PPD option values for CmdLine-type options defined by FoomaticRIPOption.
 //
@@ -133,9 +134,9 @@ generate_hash_file(cups_array_t *values, // I - File with values to hash
 
 //
 // `find_foomaticrip_keywords()` - reads PPD file, find FoomaticRIPCommandLine,
-// FoomaticRIPCommandLinePDF, FoomaticRIPOptionSetting, FoomaticRIPPostPipe and
-// standard PPD option values for CmdLine-type options, save their values into
-// CUPS array.
+// FoomaticRIPCommandLinePDF, FoomaticRIPOptionSetting,
+// FoomaticRIPOptionPrototype, FoomaticRIPPostPipe and standard PPD option
+// values for CmdLine-type options, save their values into CUPS array.
 //
 
 int					      // O - 0 on success, 1 on error
@@ -272,6 +273,7 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
     if (strcmp(key, "FoomaticRIPCommandLine") &&
 	strcmp(key, "FoomaticRIPCommandLinePDF") &&
 	strcmp(key, "FoomaticRIPOptionSetting") &&
+	strcmp(key, "FoomaticRIPOptionPrototype") &&
 	strcmp(key, "FoomaticRIPPostPipe") &&
 	!cupsArrayFind(cmdline_opts, key))
       continue;
@@ -509,10 +511,10 @@ help()
 	 "foomatic-hash --ppd-paths <path1,path2...pathN> <scanoutput> <hashes_file>\n"
 	 "\n"
 	 "Finds values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine,\n"
-	 "FoomaticRIPOptionSetting, FoomaticRIPPostPipe and standard PPD option\n"
-	 "values for CmdLine-type options (declared via FoomaticRIPOption) from the\n"
-	 "specified PPDs, appends them into the specified scan output for review,\n"
-	 "and hashes the found values.\n"
+	 "FoomaticRIPOptionSetting, FoomaticRIPOptionPrototype, FoomaticRIPPostPipe\n"
+	 "and standard PPD option values for CmdLine-type options (declared via\n"
+	 "FoomaticRIPOption) from the specified PPDs, appends them into the specified\n"
+	 "scan output for review, and hashes the found values.\n"
 	 "\n"
 	 "--ppd <ppdfile>                   - PPD file to read\n"
 	 "--ppd-paths <path1,path2...pathN> - Paths to look for PPDs, available only with libppd\n"
@@ -566,7 +568,8 @@ main(int argc,
 
   //
   // Write found values of FoomaticRIPCommandLine, FoomaticRIPPDFCommandLine,
-  // FoomaticRIPOptionSetting, FoomaticRIPPostPipe and CmdLine option values...
+  // FoomaticRIPOptionSetting, FoomaticRIPOptionPrototype, FoomaticRIPPostPipe
+  // and CmdLine option values...
   //
 
   write_array(data, argv[3]);

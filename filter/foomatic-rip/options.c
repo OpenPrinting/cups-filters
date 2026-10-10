@@ -2100,6 +2100,14 @@ read_ppd_file(const char *filename)
     }
     else if (!strcmp(key, "FoomaticRIPOptionPrototype"))
     {
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      {
+        cupsArrayDelete(known_hashes);
+        fclose(fh);
+
+        rip_die(EXIT_PRNERR_NOTALLOWED, "ERROR: The value of the key %s is not among the allowed values - see foomatic-rip man page for more instructions.\n", key);
+      }
+
       // "*FoomaticRIPOptionPrototype <option>: <code>"
       // Used for numerical and string options only
       opt = assure_option(name);
