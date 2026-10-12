@@ -1160,7 +1160,7 @@ dstrremove(dstr_t *ds,
 {
   char *p1, *p2;
 
-  if (idx + count >= ds->len)
+  if (idx + count > ds->len)
     return;
 
   p1 = &ds->data[idx];
@@ -1173,6 +1173,7 @@ dstrremove(dstr_t *ds,
     p2++;
   }
   *p1 = '\0';
+  ds->len -= count;
 }
 
 
