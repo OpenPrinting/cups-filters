@@ -789,9 +789,13 @@ dstr_t *
 create_dstr()
 {
   dstr_t *ds = malloc(sizeof(dstr_t));
+  if (!ds)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   ds->len = 0;
   ds->alloc = 32;
   ds->data = malloc(ds->alloc);
+  if (!ds->data)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   ds->data[0] = '\0';
   return (ds);
 }
@@ -813,6 +817,20 @@ dstrclear(dstr_t *ds)
 }
 
 
+// Grows ds->data to ds->alloc bytes, or terminates the process: every
+// dstr_t grower below doubles ds->alloc and resizes unconditionally, with
+// no caller in a position to recover from a failed allocation partway
+// through building a string.
+static void
+dstr_grow_(dstr_t *ds)
+{
+  char *tmp = realloc(ds->data, ds->alloc);
+  if (!tmp)
+    rip_die(1, "ERROR: out of memory (realloc failed)");
+  ds->data = tmp;
+}
+
+
 void
 dstrassure(dstr_t *ds,
 	   size_t alloc)
@@ -820,7 +838,7 @@ dstrassure(dstr_t *ds,
   if (ds->alloc < alloc)
   {
     ds->alloc = alloc;
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
 }
 
@@ -847,7 +865,7 @@ dstrcpy(dstr_t *ds,
       ds->alloc *= 2;
     }
     while (srclen >= ds->alloc);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
 
   memcpy(ds->data, src, srclen + 1);
@@ -867,7 +885,7 @@ dstrncpy(dstr_t *ds,
       ds->alloc *= 2;
     }
     while (n >= ds->alloc);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
 
   strncpy(ds->data, src, n);
@@ -890,7 +908,7 @@ dstrncat(dstr_t *ds,
       ds->alloc *= 2;
     }
     while (needed >= ds->alloc);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
 
   strncpy(&ds->data[ds->len], src, n);
@@ -918,7 +936,7 @@ dstrcpyf(dstr_t *ds,
       ds->alloc *= 2;
     }
     while (srclen >= ds->alloc);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
 
     va_start(ap, src);
     vsnprintf(ds->data, ds->alloc, src, ap);
@@ -936,7 +954,7 @@ dstrputc(dstr_t *ds,
   if (ds->len +1 >= ds->alloc)
   {
     ds->alloc *= 2;
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
   ds->data[ds->len++] = c;
   ds->data[ds->len] = '\0';
@@ -957,7 +975,7 @@ dstrcat(dstr_t *ds,
       ds->alloc *= 2;
     }
     while (newlen >= ds->alloc);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
   }
 
   memcpy(&ds->data[ds->len], src, srclen +1);
@@ -986,7 +1004,7 @@ dstrcatf(dstr_t *ds,
       restlen = ds->alloc - ds->len;
     }
     while (srclen >= restlen);
-    ds->data = realloc(ds->data, ds->alloc);
+    dstr_grow_(ds);
 
     va_start(ap, src);
     srclen = vsnprintf(&ds->data[ds->len], restlen, src, ap);
@@ -1009,6 +1027,8 @@ fgetdstr(dstr_t *ds,
   {
     ds->alloc = 256;
     ds->data = malloc(ds->alloc);
+    if (!ds->data)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
   }
 
   while ((c = fgetc(stream)) != EOF)
@@ -1016,7 +1036,7 @@ fgetdstr(dstr_t *ds,
     if (ds->len +1 == ds->alloc)
     {
       ds->alloc *= 2;
-      ds->data = realloc(ds->data, ds->alloc);
+      dstr_grow_(ds);
     }
     ds->data[ds->len++] = (char)c;
     cnt ++;
@@ -1078,6 +1098,9 @@ dstrinsert(dstr_t *ds,
   char * copy = strdup(ds->data);
   size_t len = strlen(str);
 
+  if (!copy)
+    rip_die(1, "ERROR: out of memory (strdup failed)");
+
   if (idx >= ds->len)
     idx = ds->len;
   else if (idx < 0)
@@ -1092,6 +1115,8 @@ dstrinsert(dstr_t *ds,
     while (ds->len + len >= ds->alloc);
     free(ds->data);
     ds->data = malloc(ds->alloc);
+    if (!ds->data)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
   }
 
   strncpy(ds->data, copy, idx);
