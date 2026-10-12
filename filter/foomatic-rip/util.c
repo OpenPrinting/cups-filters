@@ -1353,7 +1353,7 @@ list_prepend(list_t *list,
   if (list->first)
   {
     item->next = list->first;
-    list->first->next = item;
+    list->first->prev = item;
     list->first = item;
   }
   else
