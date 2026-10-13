@@ -1274,7 +1274,13 @@ dstrtrim_right(dstr_t *ds)
   if (!ds->len)
     return;
 
-  while (isspace(ds->data[ds->len - 1]))
+  // The entry check above only protects the *first* access: if every remaining character
+  // is whitespace, the loop itself drives ds->len (size_t, unsigned) down to 0 and then
+  // past it. "ds->len - 1" then wraps to SIZE_MAX, and "&ds->data[SIZE_MAX]" wraps back
+  // (pointer arithmetic is modulo the address space) to one byte before ds->data -- an
+  // out-of-bounds read the loop has no business continuing past, whatever that byte
+  // happens to classify as.
+  while (ds->len > 0 && isspace((unsigned char)ds->data[ds->len - 1]))
     ds->len -= 1;
   ds->data[ds->len] = '\0';
 }
