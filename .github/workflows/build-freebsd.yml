@@ -1,0 +1,133 @@
+name: FreeBSD CI Build & Test
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+  workflow_dispatch:
+
+jobs:
+  build-freebsd:
+    name: Build & Test (FreeBSD)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Save workspace directory
+        run: |
+          echo "REPO_DIR=$(pwd)" >> $GITHUB_ENV
+
+      # ========================================================================
+      # FREEBSD BUILD AND TEST
+      # ========================================================================
+      - name: Build and test on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          copyback: true
+          run: |
+            set -ex
+            export REPO_DIR="$GITHUB_WORKSPACE"
+
+            # ========================================================================
+            # DEPENDENCIES
+            # ========================================================================
+            pkg update -f
+            pkg install -y \
+              git \
+              curl \
+              wget \
+              bash \
+              gmake \
+              autoconf \
+              automake \
+              libtool \
+              pkgconf \
+              gettext-tools \
+              libiconv \
+              cups \
+              ghostscript10 \
+              poppler \
+              poppler-glib \
+              poppler-utils \
+              fontconfig \
+              freetype2 \
+              lcms2 \
+              jpeg-turbo \
+              libjxl \
+              libexif \
+              openjpeg \
+              avahi-app \
+              dbus \
+              qpdf \
+              mupdf \
+              png \
+              tiff \
+              zstd
+
+            # Use /usr/local include/libs explicitly on FreeBSD
+            export CPPFLAGS="-I/usr/local/include"
+            export LDFLAGS="-L/usr/local/lib -Wl,-rpath,/usr/local/lib"
+            export PKG_CONFIG_PATH="/usr/local/libdata/pkgconfig:/usr/local/lib/pkgconfig"
+            export LIBS="-liconv"
+            if pkg-config --exists lcms2; then
+              export LCMS_CFLAGS="$(pkg-config --cflags lcms2)"
+              export LCMS_LIBS="$(pkg-config --libs lcms2)"
+            fi
+
+            # ========================================================================
+            # BUILD DEPENDENCY LIBRARIES (pdfio, libcupsfilters, libppd)
+            # ========================================================================
+            cd /tmp
+            wget -q https://github.com/michaelrsweet/pdfio/releases/download/v1.6.2/pdfio-1.6.2.tar.gz
+            tar -xzf pdfio-1.6.2.tar.gz
+            cd pdfio-1.6.2
+            ./configure --prefix=/usr/local --enable-shared
+            gmake all
+            gmake install
+
+            cd /tmp
+            git clone --depth 1 https://github.com/OpenPrinting/libcupsfilters.git
+            cd libcupsfilters
+            ./autogen.sh
+            # FreeBSD toolchain header compatibility for libcupsfilters
+            CFLAGS="-g -O2 -include stdint.h -include signal.h -include unistd.h" ./configure --prefix=/usr/local
+            gmake -j$(sysctl -n hw.ncpu)
+            gmake install
+
+            cd /tmp
+            git clone --depth 1 https://github.com/OpenPrinting/libppd.git
+            cd libppd
+            ./autogen.sh
+            ./configure --prefix=/usr/local
+            gmake -j$(sysctl -n hw.ncpu)
+            gmake install
+
+            # ========================================================================
+            # BUILD cups-filters (FreeBSD)
+            # ========================================================================
+            cd "$REPO_DIR"
+            ./autogen.sh
+            ./configure --prefix=/usr/local
+            gmake -j$(sysctl -n hw.ncpu) V=1
+
+            # ========================================================================
+            # RUN TEST SUITE (FreeBSD)
+            # ========================================================================
+            gmake check V=1 VERBOSE=1 || (test -f test-suite.log && cat test-suite.log; exit 1)
+
+      # ========================================================================
+      # ARTIFACT COLLECTION (FreeBSD)
+      # ========================================================================
+      - name: Upload test logs on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-freebsd
+          path: |
+            test-suite.log
+            **/*.log
+          if-no-files-found: ignore
