@@ -1212,9 +1212,15 @@ dstrendswith(dstr_t *ds,
 void
 dstrfixnewlines(dstr_t *ds)
 {
+  // ds->len is size_t (unsigned): on an empty string, "ds->len - 1" wraps to SIZE_MAX
+  // instead of going negative, the same underflow dstrremovenewline() just below already
+  // guards against with this same "if (!ds->len) return;" check.
+  if (!ds->len)
+    return;
+
   if (ds->data[ds->len -1] == '\r')
     ds->data[ds->len -1] = '\n';
-  else if (ds->data[ds->len -2] == '\r')
+  else if (ds->len >= 2 && ds->data[ds->len -2] == '\r')
   {
     ds->data[ds->len -1] = '\n';
     ds->data[ds->len -2] = '\0';
