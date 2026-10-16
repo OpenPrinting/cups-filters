@@ -26,6 +26,7 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/wait.h>
 
 
@@ -129,7 +130,11 @@ main(int  argc,				// I - Number of command-line args
   att = 0;
   while (isdigit(*ptr))
   {
-    att = att * 10 + (int)(*ptr) - 48;
+    // Cap instead of letting a pathologically long digit run overflow
+    // a signed int (undefined behavior); the extra digits are still
+    // consumed so parsing of the rest of the URI isn't affected.
+    if (att < INT_MAX / 10)
+      att = att * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
   if (*ptr != '/')
@@ -138,7 +143,8 @@ main(int  argc,				// I - Number of command-line args
   delay = 0;
   while (isdigit(*ptr))
   {
-    delay = delay * 10 + (int)(*ptr) - 48;
+    if (delay < INT_MAX / 10)
+      delay = delay * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
   if (*ptr != '/')
