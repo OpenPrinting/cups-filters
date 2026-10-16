@@ -56,8 +56,7 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 		    char* ippfind_output) {
   int	port,
         is_local;
-  char	buffer[8192],		/* Copy buffer */
-        *ptr,		        /* Pointer into string */
+  char	*ptr,		        /* Pointer into string */
         *scheme = NULL,
         *service_name = NULL,
         *resource = NULL,
@@ -97,20 +96,20 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
   if (mode == -1) {
     /* Standard IPP URI (only manual call) */
     service_hostname = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    ptr = strchr(ptr, '\t');
     if (!ptr)
       goto read_error;
     *ptr = '\0';
     ptr ++;
 
     resource = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    ptr = strchr(ptr, '\t');
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
 
     ptr_to_port = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    ptr = strchr(ptr, '\t');
     if (!ptr) goto read_error;
     *ptr = '\0';
     ptr ++;
@@ -129,14 +128,14 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
   } else {
     /* DNS-SD-service-name-based URI */
     service_name = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    ptr = strchr(ptr, '\t');
     if (!ptr)
       goto read_error;
     *ptr = '\0';
     ptr ++;
 
     domain = ptr;
-    ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+    ptr = strchr(ptr, '\t');
     if (!ptr)
       goto read_error;
     *ptr = '\0';
@@ -158,37 +157,37 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	 or as backend in discovery mode (/usr/lib/cups/backend/,
 	 env variable "SOFTWARE" starts with "CUPS") */
       txt_usb_mfg = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
       txt_usb_mdl = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
       txt_product = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
       txt_ty = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
       txt_pdl = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
       ptr ++;
       txt_uuid = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
@@ -196,7 +195,7 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	 resource will stay blank meaning device does not support fax */
       ptr ++;
       resource = ptr;
-      ptr = memchr(ptr, '\t', sizeof(buffer) - (ptr - buffer));
+      ptr = strchr(ptr, '\t');
       if (!ptr)
 	goto read_error;
       *ptr = '\0';
