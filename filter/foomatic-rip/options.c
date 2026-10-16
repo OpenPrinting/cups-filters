@@ -646,13 +646,13 @@ get_valid_param_string(option_t *opt,
 	fmax = !isempty(param->max) ? atof(param->max) : 1000000.0;
 	if (f < fmin)
 	{
-	  _log("Value \"%s\" for option \"%s\", parameter \"%s\" is smaller than the minimum value \"%d\"\n",
+	  _log("Value \"%s\" for option \"%s\", parameter \"%s\" is smaller than the minimum value \"%g\"\n",
 	       str, opt->name, param->name, fmin);
 	  return (NULL);
 	}
 	else if (f > fmax)
 	{
-	  _log("Value \"%s\" for option \"%s\", parameter \"%s\" is larger than the maximum value \"%d\"\n",
+	  _log("Value \"%s\" for option \"%s\", parameter \"%s\" is larger than the maximum value \"%g\"\n",
 	       str, opt->name, param->name, fmax);
 	  return (NULL);
 	}
