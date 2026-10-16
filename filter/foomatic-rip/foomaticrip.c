@@ -890,9 +890,14 @@ main(int argc,
     if (spooler != SPOOLER_CUPS)
     {
       _log("called with arguments: ");
-      for (i = 1; i < argc -1; i++)
-	_log("\'%s\', ", argv[i]);
-      _log("\'%s\'\n", argv[i]);
+      if (argc > 1)
+      {
+	for (i = 1; i < argc -1; i++)
+	  _log("\'%s\', ", argv[i]);
+	_log("\'%s\'\n", argv[i]);
+      }
+      else
+	_log("(none)\n");
     }
   }
 
@@ -1034,9 +1039,14 @@ main(int argc,
     if (spooler != SPOOLER_CUPS)
     {
       _log("called with arguments: ");
-      for (i = 1; i < argc -1; i++)
-	_log("\'%s\', ", argv[i]);
-      _log("\'%s\'\n", argv[i]);
+      if (argc > 1)
+      {
+	for (i = 1; i < argc -1; i++)
+	  _log("\'%s\', ", argv[i]);
+	_log("\'%s\'\n", argv[i]);
+      }
+      else
+	_log("(none)\n");
     }
   }
 
