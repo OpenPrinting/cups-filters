@@ -473,8 +473,9 @@ process_cmdline_options()
     {
       // Various non-standard printer-specific options
       if (!option_set_value(opt, optset, value)) {
-	_log("  invalid choice \"%s\", using \"%s\" instead\n", 
-	     value, option_get_value(opt, optset));
+	const char *curval = option_get_value(opt, optset);
+	_log("  invalid choice \"%s\", using \"%s\" instead\n",
+	     value, curval ? curval : "(none)");
       }
     }
     // Standard bool args:
