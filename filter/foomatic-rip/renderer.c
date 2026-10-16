@@ -396,7 +396,10 @@ write_merged_jcl_options(FILE *stream,
     }
     if (optsp1 != original_opts) p = *optsp1;
     if (!p)
-      _log("write_merged_jcl_options() dereferences NULL pointer p\n");
+    {
+      _log("write_merged_jcl_options(): p is NULL, skipping this JCL line\n");
+      continue;
+    }
     if (jcl_options_find_keyword(opts, p, jclstr))
       fprintf(stream, "%s\n", jcl_options_find_keyword(opts, p, jclstr));
     else
