@@ -397,9 +397,14 @@ find_option(const char *name)
 
   for (opt = optionlist; opt; opt = opt->next)
   {
+    // Check the "no" prefix before indexing &name[2]: prefixcasecmp()
+    // stops at name's own NUL (it's strncasecmp(), which never reads
+    // past either argument's terminator), but &name[2] itself would
+    // already point past the end of a name shorter than 2 characters,
+    // and strcasecmp() on it would read out of bounds.
     if ((!strcasecmp(opt->name, name)) ||
-	((!strcasecmp(opt->name, &name[2])) &&
-	 (!prefixcasecmp(name, "no"))))
+	(!prefixcasecmp(name, "no") &&
+	 !strcasecmp(opt->name, &name[2])))
       return (opt);
   }
   return (NULL);
