@@ -2079,6 +2079,16 @@ read_ppd_file(const char *filename)
     else if (!strcmp(key, "OpenUI") || !strcmp(key, "JCLOpenUI"))
     {
       // "*[JCL]OpenUI *<option>[/<translation>]: <type>"
+      // name is reset to "" before the line is parsed and only overwritten
+      // if the %[...] conversion for it in the sscanf() above actually
+      // matched something; a malformed line with no "*<option>" between
+      // the keyword and the colon leaves it empty, and &name[1] would
+      // then point past its own NUL terminator.
+      if (isempty(name))
+      {
+	_log("PPD: OpenUI/JCLOpenUI line with no option name, skipping\n");
+	continue;
+      }
       current_opt = assure_option(&name[1]);
       if (!isempty(text))
 	strlcpy(current_opt->text, text, 128);
