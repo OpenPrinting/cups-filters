@@ -229,6 +229,8 @@ extract_next_option(char *str,
     p = strchr(*key, quotechar);
     if (!p)
       return (NULL);
+    *p = '\0';
+    p++;
   }
   else
   {
