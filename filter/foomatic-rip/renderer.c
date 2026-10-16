@@ -234,6 +234,24 @@ read_jcl_lines(FILE *stream,
   }
 
   cnt++;
+  // The loop above only grows "result" before storing a line, keyed on
+  // "cnt" at that point -- it never accounts for the trailing NULL
+  // terminator stored here, one slot further on. If the stream ended (or
+  // the non-JCL line that stopped the loop was stored) exactly when cnt
+  // had grown to alloc - 1, result has no room left for result[cnt].
+  if (cnt >= alloc)
+  {
+    tmp = realloc(result, (cnt + 1) * sizeof(char *));
+    if (!tmp)
+    {
+      for (size_t i = 0; i < cnt; i++)
+        free(result[i]);
+      free(result);
+      return (NULL);
+    }
+    result = tmp;
+    alloc = cnt + 1;
+  }
   result[cnt] = NULL;
   return (result);
 }
