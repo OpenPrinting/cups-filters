@@ -719,9 +719,14 @@ unhexify(char *dest,
     if (*psrc == '<')
     {
       psrc++;
-      do
+      while (*psrc && *psrc != '>' && pdest - dest < size - 1)
       {
 	cstr[0] = *psrc++;
+	if (!*psrc)
+	{
+	  printf("Error replacing hex notation in %s!\n", src);
+	  break;
+	}
 	cstr[1] = *psrc++;
 	if (!isxdigit(cstr[0]) || !isxdigit(cstr[1]))
 	{
@@ -730,8 +735,8 @@ unhexify(char *dest,
 	}
 	*pdest++ = (char)strtol(cstr, NULL, 16);
       }
-      while (*psrc != '>');
-      psrc++;
+      if (*psrc == '>')
+	psrc++;
     }
     else
       *pdest++ = *psrc++;
