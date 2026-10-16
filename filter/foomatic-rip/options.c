@@ -2453,10 +2453,19 @@ build_commandline(int optset,
 	      if (optset != optionset("currentpage"))
 		dstrcatf(setupprepend, "%s%s%s", open->data, cmdvar->data,
 			 close->data);
-	      else if (strcmp(option_get_value(opt, optionset("header")),
-			      userval) != 0)
-		dstrcatf(pagesetupprepend, "%s%s%s", open->data, cmdvar->data,
-			 close->data);
+	      else
+	      {
+		const char *headerval = option_get_value(opt, optionset("header"));
+		// headerval is NULL when this option has never had a value
+		// set for the "header" optionset (e.g. no default in the
+		// PPD); userval is always non-NULL here, since
+		// option_get_command() above already returned an empty
+		// cmdvar for a NULL userval. strcmp() doesn't tolerate a
+		// NULL argument, so treat "never set" as "different".
+		if (!headerval || strcmp(headerval, userval) != 0)
+		  dstrcatf(pagesetupprepend, "%s%s%s", open->data,
+			   cmdvar->data, close->data);
+	      }
 	      break;
 
 	  case SECTION_DOCUMENTSETUP:
