@@ -2087,9 +2087,14 @@ read_ppd_file(const char *filename)
     else if (!strcmp(key, "CloseUI") || !strcmp(key, "JCLCloseUI"))
     {
       // *[JCL]CloseUI: *<option>
-      if (!current_opt || !option_has_name(current_opt, value->data +1))
+      // value->data is reset to "" for each line and stays that way if the
+      // line has nothing after the ':' (already logged above as "Missing
+      // value", but parsing continues); value->data +1 on an empty string
+      // would point past its own NUL terminator.
+      const char *closeui_name = isempty(value->data) ? "" : value->data + 1;
+      if (!current_opt || !option_has_name(current_opt, closeui_name))
 	_log("CloseUI found without corresponding OpenUI (%s).\n",
-	     value->data +1);
+	     closeui_name);
       current_opt = NULL;
     }
     else if (!strcmp(key, "FoomaticRIPOption"))
