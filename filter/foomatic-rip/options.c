@@ -2540,6 +2540,8 @@ build_commandline(int optset,
 
 	  case SECTION_JCLSETUP:          // PCL/JCL argument
 	      s = malloc(cmdvar->len +1);
+	      if (!s)
+		rip_die(1, "ERROR: out of memory (malloc failed)");
 	      unhexify(s, cmdvar->len +1, cmdvar->data);
 	      dstrcatf(local_jclprepend, "%s", s);
 	      free(s);
@@ -2558,6 +2560,8 @@ build_commandline(int optset,
       if (cmdvar->len)
       {
 	char *s = malloc(cmdvar->len +1);
+	if (!s)
+	  rip_die(1, "ERROR: out of memory (malloc failed)");
 	unhexify(s, cmdvar->len +1, cmdvar->data);
 	if (!startswith(cmdvar->data, jclprefix))
 	  dstrcatf(local_jclprepend, "%s%s\n", jclprefix, s);
