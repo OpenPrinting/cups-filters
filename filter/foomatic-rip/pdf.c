@@ -200,7 +200,9 @@ render_pages_with_ghostscript(dstr_t *cmd,
   // first/last page on the command line
 
   // Some command lines want to read from stdin
-  for (p = &cmd->data[end_gs_cmd -1]; isspace(*p); p--);
+  for (p = &cmd->data[end_gs_cmd - 1];
+       p > &cmd->data[start_gs_cmd] && isspace(*p);
+       p--);
   if (*p == '-')
     *p = ' ';
 
