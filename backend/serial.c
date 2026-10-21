@@ -500,7 +500,7 @@ main(int  argc,				// I - Number of command-line arguments (6 or 7)
   // of the code here instead...
   //
 
-  if (print_size > sizeof(print_buffer))
+  if (print_size <= 0 || (size_t)print_size > sizeof(print_buffer))
     print_size = sizeof(print_buffer);
 
   total_bytes = 0;
