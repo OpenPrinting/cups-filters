@@ -312,6 +312,23 @@ pjl_write(const char    *format,	// I - Format string
       //
 
       format ++;
+
+      if (!*format)
+      {
+        //
+        // A bare, unescaped '%' at the very end of the format string --
+        // there is no character after it to substitute or fall through
+        // to. Emit it literally and stop: falling into the switch below
+        // would dereference the NUL terminator, then the unconditional
+        // format++ past the switch would walk `format` one byte beyond
+        // the string's allocation, which the loop's own `while (*format)`
+        // check then reads out of bounds.
+        //
+
+        putchar('%');
+        return;
+      }
+
       switch (*format)
       {
         case 'b' :			// job-billing
