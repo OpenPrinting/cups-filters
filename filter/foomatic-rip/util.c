@@ -433,6 +433,14 @@ strncpy_tochar(char *dest,
     psrc++;
   }
   *pdest = '\0';
+  // The loop can end two ways: on a stopchar (psrc + 1 is the next field,
+  // still inside the string) or on the string's own NUL (psrc + 1 is one
+  // byte past the whole allocation). A caller that loops on this return
+  // value until it sees NULL -- as every caller here does -- would keep
+  // calling isempty()/this function on that out-of-bounds pointer for any
+  // input with no trailing stopchar, which is the common case.
+  if (*psrc == '\0')
+    return (NULL);
   return (psrc + 1);
 }
 
