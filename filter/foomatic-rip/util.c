@@ -23,7 +23,7 @@
 
 
 const char *hash_alg = "sha2-256"; // Used hash algorithm
-const char *shellescapes = "|;<>&!$\'\"`#*?()[]{}";
+const char *shellescapes = "|;<>&!$\'\"`#*?()[]{}\n";
 FILE* logh = NULL;
 
 // Logging
