@@ -223,10 +223,6 @@ if ENABLE_GHOSTSCRIPT
 pkgfilter_PROGRAMS += \
 	gstoraster \
 	gstopdf
-if ENABLE_OCR_FILTER
-pkgfilter_PROGRAMS += \
-	gstopdfocr
-endif
 endif
 if ENABLE_MUTOOL
 pkgfilter_PROGRAMS += \
@@ -247,7 +243,7 @@ check_PROGRAMS = \
 TESTS = \
 	test-rastertopclx-format-string \
 	test-rastertoescpx-page-size \
-	filter/test-gstopdfocr.sh
+	filter/test-gstopdf-ocr.sh
 
 # Not reliable bash script
 #TESTS += filter/test.sh
@@ -255,7 +251,7 @@ TESTS = \
 EXTRA_DIST += \
 	$(genfilterscripts) \
 	filter/test.sh \
-	filter/test-gstopdfocr.sh \
+	filter/test-gstopdf-ocr.sh \
 	filter/test-rastertopclx-format-string.c \
 	filter/test-rastertoescpx-page-size.c
 
@@ -363,17 +359,6 @@ gstopdf_CFLAGS = \
 	$(LIBCUPSFILTERS_CFLAGS) \
 	$(LIBPPD_CFLAGS)
 gstopdf_LDADD = \
-	$(CUPS_LIBS) \
-	$(LIBCUPSFILTERS_LIBS) \
-	$(LIBPPD_LIBS)
-
-gstopdfocr_SOURCES = \
-	filter/gstopdfocr.c
-gstopdfocr_CFLAGS = \
-	$(CUPS_CFLAGS) \
-	$(LIBCUPSFILTERS_CFLAGS) \
-	$(LIBPPD_CFLAGS)
-gstopdfocr_LDADD = \
 	$(CUPS_LIBS) \
 	$(LIBCUPSFILTERS_LIBS) \
 	$(LIBPPD_LIBS)

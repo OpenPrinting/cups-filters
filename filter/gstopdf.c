@@ -1,7 +1,7 @@
 //
 // Legacy CUPS filter wrapper for cfFilterGhostscript() for cups-filters.
 //
-// PostScript to PDF filter.
+// PostScript to PDF filter, also produces searchable PDF (OCR) for scans.
 //
 // Copyright © 2020-2022 by OpenPrinting.
 //
@@ -13,9 +13,15 @@
 // Include necessary headers...
 //
 
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
+#endif // HAVE_CONFIG_H
+
 #include <cupsfilters/filter.h>
 #include <ppd/ppd-filter.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 
 
 //
@@ -65,7 +71,18 @@ main(int  argc,				// I - Number of command-line args
   //
 
   cf_filter_out_format_t outformat = CF_FILTER_OUT_FORMAT_PDF;
-  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterGhostscript, &outformat,
+  void *parameters = &outformat;
+#ifdef HAVE_OCR_OUTPUT
+  const char *final_type = getenv("FINAL_CONTENT_TYPE");
+
+  // Searchable PDF (OCR): Let cfFilterGhostscript() select the output
+  // by the job's final type. On PostScript input (first step of a
+  // PostScript -> pdftopdf -> OCR chain) it only converts to PDF, the
+  // OCR is done by the later run on the PDF.
+  if (final_type && strstr(final_type, "vnd.cups-pdf-ocr"))
+    parameters = NULL;
+#endif // HAVE_OCR_OUTPUT
+  ret = ppdFilterCUPSWrapper(argc, argv, cfFilterGhostscript, parameters,
 			     &JobCanceled);
 
   if (ret)

@@ -56,4 +56,4 @@ application/vnd.universal-input  application/vnd.cups-raster        0  universal
 application/vnd.universal-input  image/pwg-raster                   0  universal
 application/vnd.universal-input  image/urf                          0  universal
 application/vnd.universal-input  application/PCLm                   0  universal
-@ENABLE_OCR_FILTER_TRUE@application/vnd.universal-input  application/vnd.cups-pdf-ocr       0  universal
+@ENABLE_OCR_OUTPUT_TRUE@application/vnd.universal-input  application/vnd.cups-pdf-ocr       0  universal
