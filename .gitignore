@@ -40,6 +40,8 @@ m4/ltversion.m4
 m4/lt~obsolete.m4
 mime/cupsfilters.convs
 mime/cupsfilters-individual.convs
+mime/cupsfilters-ghostscript.convs
+mime/cupsfilters-universal.convs
 utils/driverless-fax
 beh
 parallel

@@ -151,6 +151,24 @@ AC_SUBST(CUPS_SERVERBIN)
 # ========================
 PKG_CHECK_MODULES([LIBCUPSFILTERS], [libcupsfilters])
 
+# Searchable PDF (OCR) output of gstopdf needs libcupsfilters 2.3 or newer
+AC_MSG_CHECKING([for searchable PDF (OCR) output in libcupsfilters])
+save_CFLAGS="$CFLAGS"
+save_LIBS="$LIBS"
+CFLAGS="$CFLAGS $LIBCUPSFILTERS_CFLAGS"
+LIBS="$LIBCUPSFILTERS_LIBS $LIBS"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <cupsfilters/filter.h>]],
+			 [[cf_filter_out_format_t f = CF_FILTER_OUT_FORMAT_PDF_OCR;
+			   return cfFilterGhostscriptOCRAvailable(NULL, NULL, 0) + f;]])],
+	[have_ocr_output=yes], [have_ocr_output=no])
+CFLAGS="$save_CFLAGS"
+LIBS="$save_LIBS"
+AC_MSG_RESULT([$have_ocr_output])
+AS_IF([test "x$have_ocr_output" = "xyes"],
+      [AC_DEFINE([HAVE_OCR_OUTPUT], [1],
+		 [libcupsfilters can produce searchable PDF (OCR)])])
+AM_CONDITIONAL([ENABLE_OCR_OUTPUT], [test "x$have_ocr_output" = "xyes"])
+
 # ======================
 # Check for libjxl (JPEG-XL)
 # ======================
@@ -427,6 +445,8 @@ AC_CONFIG_FILES([
 	Makefile
 	filter/foomatic-rip/foomatic-rip.1
 	mime/cupsfilters-individual.convs
+	mime/cupsfilters-ghostscript.convs
+	mime/cupsfilters-universal.convs
 ])
 AC_OUTPUT
 

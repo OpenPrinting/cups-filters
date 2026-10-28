@@ -19,3 +19,11 @@ application/vnd.cups-pdf	image/pwg-raster		99	gstoraster
 application/vnd.cups-pdf	image/urf			99	gstoraster
 application/vnd.cups-pdf	application/PCLm		99	gstoraster
 application/vnd.cups-postscript	application/vnd.cups-raster	175	gstoraster
+
+#
+# Searchable PDF (OCR text layer) for scans, needs Ghostscript with
+# Tesseract support. gstopdf produces it when the job's final type is
+# application/vnd.cups-pdf-ocr and its input is PDF (from pdftopdf).
+#
+
+@ENABLE_OCR_OUTPUT_TRUE@application/vnd.cups-pdf	application/vnd.cups-pdf-ocr	99	gstopdf

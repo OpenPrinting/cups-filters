@@ -1272,6 +1272,95 @@ cups-filters without introducing new dependencies.
 
 ---
 
+#### GSTOPDF: SEARCHABLE PDF (OCR) OUTPUT
+
+Besides converting PostScript to PDF, gstopdf converts a scanned
+document (a raster-only PDF or PostScript as delivered by IPP Scan and
+Scanner Applications, or any image or Raster input via the preceding
+filters) into a searchable PDF. The pages stay as they are, an
+invisible text layer with the recognized text is added, so that the
+result can be searched, indexed, and text can be selected and copied.
+
+This uses the `CF_FILTER_OUT_FORMAT_PDF_OCR` output format of
+`cfFilterGhostscript()` of libcupsfilters, which runs the
+`pdfocr8`/`pdfocr24` output devices of Ghostscript with the Tesseract
+OCR engine. It is only enabled if libcupsfilters provides it (2.3 or
+newer).
+
+##### Requirements
+
+- Ghostscript built with Tesseract support (`gs -h` lists the
+  `pdfocr8` device; the Ghostscript packages of the usual
+  distributions have it).
+- The Tesseract language data of the languages to recognize, for
+  example the `tesseract-ocr-eng`, `tesseract-ocr-deu`, ... packages.
+  The filter finds the data in `TESSDATA_PREFIX` or in the usual
+  directories of the distributions and passes the location to
+  Ghostscript, as Ghostscript's compiled-in default is often not where
+  the packages install the data.
+
+##### MIME types and filter chain
+
+The output type is `application/vnd.cups-pdf-ocr`. The conversion is
+registered from `application/vnd.cups-pdf`, so all the usual input
+formats reach it through the standard chain, for example
+`image/jpeg -> imagetopdf -> gstopdf` for a scan delivered as JPEG, or
+`application/pdf -> pdftopdf -> gstopdf`. With the universal filter the
+conversion to `application/vnd.cups-pdf-ocr` is done by `universal`
+through the same filter function.
+
+gstopdf produces the searchable PDF when the job's final type
+(`FINAL_CONTENT_TYPE`) is `application/vnd.cups-pdf-ocr` and its input
+is PDF, the output of pdftopdf. The OCR conversion is always the last
+step of a chain, and the input condition makes sure that in a
+`application/postscript -> gstopdf -> pdftopdf -> gstopdf` chain only
+the second run does the OCR. In all other cases gstopdf produces plain
+PDF as before.
+
+##### Options
+
+All settings are job options, so they can be given with `-o` on the
+command line or as IPP job attributes:
+
+- `ocr-language=<lang>`: Tesseract language(s), for example `eng`,
+  `deu`, or `eng+deu`. Default `eng`. With Ghostscript 10.02 a
+  combination of languages does not always give the expected result,
+  so give the main language of the document.
+- `ocr-engine=0|1|2`: Tesseract engine, 0 = LSTM, 1 = legacy, 2 = both.
+  Default is Ghostscript's default (LSTM).
+- `ocr-fallback=true|false`: If OCR is not possible (Ghostscript
+  without Tesseract, language data missing) or fails, output a
+  raster-only PDF without text layer instead of failing the job.
+  Default `true`.
+- `ocr-resolution=<dpi>`: Rendering/OCR resolution, default 300 (or
+  the job's `printer-resolution`).
+- `ocr-tessdata-dir=<dir>`: Directory with the `*.traineddata` files,
+  if not in a standard location.
+
+##### Command line
+
+As a CUPS filter, with the environment a CUPS filter chain provides,
+reading the scan from a file or from stdin and writing the searchable
+PDF to stdout:
+
+    CONTENT_TYPE=application/vnd.cups-pdf FINAL_CONTENT_TYPE=application/vnd.cups-pdf-ocr \
+      gstopdf 1 user "My scan" 1 "ocr-language=deu" scan.pdf > searchable.pdf
+
+Through the CUPS filter chain, with the input type detected
+automatically:
+
+    cupsfilter -m application/vnd.cups-pdf-ocr -o ocr-language=eng scan.jpg > searchable.pdf
+
+The text layer can be checked with `pdftotext searchable.pdf -`.
+
+The whole path from a scanner to the searchable PDF was verified with
+the eSCL scanner simulator of
+[go-mfp](https://github.com/OpenPrinting/go-mfp) (`mfp-virtual` with
+the model of an HP LaserJet MFP M426fdn), `scanimage` via sane-airscan
+producing a JPEG, and `cupsfilter` resolving `image/jpeg ->
+application/vnd.cups-pdf-ocr` through `universal` as well as through
+`imagetopdf` and `gstopdf`.
+
 ## DEVELOPMENT AND CI/CD
 
 ### CodeQL Static Analysis Configuration
