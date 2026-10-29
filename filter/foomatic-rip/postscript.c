@@ -226,7 +226,6 @@ print_ps(FILE *file,
     // not
     //
 
-    char buf[4096];
     char gscommand[65536];
     line = create_dstr();
     data_read = create_dstr();
@@ -304,7 +303,8 @@ print_ps(FILE *file,
 
       // Redefine stream for what we have read now
       if (data_read->len < len)
-	dstrncat(data_read, buf + data_read->len, len - data_read->len);
+	dstrncat(data_read, alreadyread + data_read->len,
+		 len - data_read->len);
 
       stream.pos = 0;
       stream.file = file;
