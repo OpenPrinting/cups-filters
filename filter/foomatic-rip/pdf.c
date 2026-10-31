@@ -32,9 +32,9 @@ int
 pdf_count_pages(const char *filename)
 {
   char gscommand[CMDLINE_MAX];
-  char output[63] = "";
+  char output[64] = "";
   int pagecount;
-  size_t bytes;
+  size_t bytes, total_read;
   char *p;
 
   snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -dNOSAFER -dNOPAUSE -q -c "
@@ -47,10 +47,15 @@ pdf_count_pages(const char *filename)
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
 
-  bytes = fread_or_die(output, 1, sizeof(output), pd);
+  // Leave room for a terminator: if ghostscript's output filled the whole
+  // buffer, sscanf()/memchr() below must not run past the end looking for
+  // one that was never there.
+  total_read = fread_or_die(output, 1, sizeof(output) - 1, pd);
+  output[total_read] = '\0';
   pclose(pd);
 
   p = output;
+  bytes = total_read;
   pagecount = -1;
   while (bytes > 0)
   {
@@ -60,7 +65,7 @@ pdf_count_pages(const char *filename)
     if (p == NULL)
       break;
     p ++;
-    bytes = sizeof(output) - (p - output);
+    bytes = total_read - (p - output);
   }
 
   return (pagecount);
