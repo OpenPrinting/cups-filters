@@ -30,16 +30,18 @@
 int
 test_gs_output_redirection()
 {
-  char gstestcommand[CMDLINE_MAX];
   char output[10] = "";
   int bytes;
+  pid_t pid;
+  char *gsargv[] =
+  {
+    gspath, "-dQUIET", "-dSAFER", "-dNOPAUSE", "-dBATCH", "-dNOMEDIAATTRS",
+    "-sDEVICE=ps2write", "-sstdout=%stderr", "-sOutputFile=/dev/null", "-c",
+    "(hello\n) print flush", NULL
+  };
 
-  snprintf(gstestcommand, CMDLINE_MAX,
-	   "%s -dQUIET -dSAFER -dNOPAUSE "
-	   "-dBATCH -dNOMEDIAATTRS -sDEVICE=ps2write -sstdout=%%stderr "
-	   "-sOutputFile=/dev/null -c '(hello\n) print flush' 2>&1", gspath);
-
-  FILE *pd = popen(gstestcommand, "r");
+  // stderr goes into the pipe too, like "2>&1" did with popen()
+  FILE *pd = open_argv_process(gsargv, 1, &pid);
   if (!pd)
   {
     _log("Failed to execute ghostscript!\n");
@@ -47,7 +49,7 @@ test_gs_output_redirection()
   }
 
   bytes = fread_or_die(output, 1, 10, pd);
-  pclose(pd);
+  close_argv_process(pd, pid);
 
   if (bytes > 0 && startswith(output, "hello"))
     return (1);
