@@ -16,6 +16,7 @@
 #include "util.h"
 #include <sys/wait.h>
 #include <errno.h>
+#include <string.h>
 #include <stdlib.h>
 #include <signal.h>
 
@@ -278,4 +279,77 @@ run_system_process(const char *name,
 {
   int pid = start_system_process(name, command, NULL, NULL);
   return (wait_for_process(pid));
+}
+
+
+//
+// 'open_argv_process()' - Run a program with an argument vector and read its
+//                         standard output.  Unlike popen() no shell is used,
+//                         so file names in the arguments are never parsed
+//                         as shell syntax.
+//
+
+FILE *
+open_argv_process(char *const argv[],
+		  int stderr_to_stdout,
+		  pid_t *pid)
+{
+  int fds[2];
+  FILE *fp;
+
+
+  if (pipe(fds) < 0)
+    return (NULL);
+
+  if ((*pid = fork()) < 0)
+  {
+    close(fds[0]);
+    close(fds[1]);
+    return (NULL);
+  }
+
+  if (*pid == 0)
+  {
+    // Child: stdout (and optionally stderr) go into the pipe
+    close(fds[0]);
+    if (dup2(fds[1], STDOUT_FILENO) < 0 ||
+	(stderr_to_stdout && dup2(fds[1], STDERR_FILENO) < 0))
+      _exit(127);
+    if (fds[1] != STDOUT_FILENO && fds[1] != STDERR_FILENO)
+      close(fds[1]);
+    execvp(argv[0], argv);
+    fprintf(stderr, "Cannot run %s: %s\n", argv[0], strerror(errno));
+    _exit(127);
+  }
+
+  close(fds[1]);
+  if ((fp = fdopen(fds[0], "r")) == NULL)
+  {
+    close(fds[0]);
+    waitpid(*pid, NULL, 0);
+    return (NULL);
+  }
+
+  return (fp);
+}
+
+
+//
+// 'close_argv_process()' - Close the stream of a program started with
+//                          open_argv_process() and wait for it to finish.
+//
+
+int
+close_argv_process(FILE *fp,
+		   pid_t pid)
+{
+  int status;
+
+
+  fclose(fp);
+  while (waitpid(pid, &status, 0) < 0)
+    if (errno != EINTR)
+      return (-1);
+
+  return (status);
 }

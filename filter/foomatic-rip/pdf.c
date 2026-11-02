@@ -28,21 +28,84 @@
 static int wait_for_renderer();
 
 
+//
+// Ghostscript treats file names starting with '|' or '%' as pipes or
+// devices, so give it relative names as "./name"
+//
+
+static const char *
+gs_file_name(const char *name,
+	     char *buf,
+	     size_t bufsize)
+{
+  if (name[0] == '/')
+    return (name);
+
+  snprintf(buf, bufsize, "./%s", name);
+  return (buf);
+}
+
+
+//
+// Quote a file name for the renderer's shell command line, as
+// 'name' with every ' written as '\''.  Returns a malloc()ed string.
+//
+
+static char *
+shell_quote(const char *s)
+{
+  size_t len = 3;
+  const char *p;
+  char *q, *r;
+
+  for (p = s; *p; p ++)
+    len += (*p == '\'') ? 4 : 1;
+
+  if ((q = malloc(len)) == NULL)
+    rip_die(EXIT_STARVED, "Not enough memory to quote a file name\n");
+
+  r = q;
+  *r++ = '\'';
+  for (p = s; *p; p ++)
+  {
+    if (*p == '\'')
+    {
+      memcpy(r, "'\\''", 4);
+      r += 4;
+    }
+    else
+      *r++ = *p;
+  }
+  *r++ = '\'';
+  *r = '\0';
+
+  return (q);
+}
+
+
 int
 pdf_count_pages(const char *filename)
 {
-  char gscommand[CMDLINE_MAX];
+  char file_arg[PATH_MAX + 32], name[PATH_MAX + 2];
   char output[64] = "";
   int pagecount;
   size_t bytes, total_read;
   char *p;
+  pid_t pid;
 
-  snprintf(gscommand, CMDLINE_MAX, "%s -dNODISPLAY -dNOSAFER -dNOPAUSE -q -c "
-	   "'/pdffile (%s) (r) file runpdfbegin (PageCount: ) print "
-	   "pdfpagecount = quit'",
-	   gspath, filename);
+  // Hand the file name to Ghostscript as a string parameter, so it does not
+  // need to be quoted, neither for a shell nor inside the PostScript code
+  snprintf(file_arg, sizeof(file_arg), "-sFoomaticPDFFile=%s",
+	   gs_file_name(filename, name, sizeof(name)));
+  char *gsargv[] =
+  {
+    gspath, "-dNODISPLAY", "-dNOSAFER", "-dNOPAUSE", "-q", file_arg, "-c",
+    "/pdffile FoomaticPDFFile (r) file runpdfbegin (PageCount: ) print "
+    "pdfpagecount = quit",
+    NULL
+  };
 
-  FILE *pd = popen(gscommand, "r");
+  FILE *pd = open_argv_process(gsargv, 0, &pid);
   if (pd == NULL)
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
@@ -52,7 +115,7 @@ pdf_count_pages(const char *filename)
   // one that was never there.
   total_read = fread_or_die(output, 1, sizeof(output) - 1, pd);
   output[total_read] = '\0';
-  pclose(pd);
+  close_argv_process(pd, pid);
 
   p = output;
   bytes = total_read;
@@ -125,9 +188,13 @@ pdf_extract_pages(char filename[PATH_MAX],
 		  int first,
 		  int last)
 {
-  char gscommand[CMDLINE_MAX];
-  char filename_arg[PATH_MAX], first_arg[50], last_arg[50];
-  int fd;
+  char filename_arg[2 * PATH_MAX + 16], first_arg[50], last_arg[50];
+  char name[PATH_MAX + 2], inname[PATH_MAX + 2];
+  const char *p;
+  char *q;
+  char *gsargv[16];
+  int fd, n = 0;
+  pid_t pid;
 
   _log("Extracting pages %d through %d\n", first, last);
 
@@ -136,7 +203,18 @@ pdf_extract_pages(char filename[PATH_MAX],
     rip_die(EXIT_STARVED, "Unable to create temporary file!\n");
   close (fd);
 
-  snprintf(filename_arg, PATH_MAX, "-sOutputFile=%s", filename);
+  // Ghostscript expands '%' in output file names (e.g. "%d" for the page
+  // number), so double them
+  snprintf(filename_arg, sizeof(filename_arg), "-sOutputFile=");
+  q = filename_arg + strlen(filename_arg);
+  for (p = gs_file_name(filename, name, sizeof(name));
+       *p && q < filename_arg + sizeof(filename_arg) - 2; p ++)
+  {
+    if (*p == '%')
+      *q++ = '%';
+    *q++ = *p;
+  }
+  *q = '\0';
 
   first_arg[0] = '\0';
   last_arg[0] = '\0';
@@ -145,15 +223,28 @@ pdf_extract_pages(char filename[PATH_MAX],
   if (last >= first)
     snprintf(last_arg, 50, "-dLastPage=%d", last);
 
-  snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dSAFER -dNOINTERPOLATE -dNOMEDIAATTRS "
-	   "-sDEVICE=pdfwrite -dShowAcroForm %s %s %s %s",
-	   gspath, filename_arg, first_arg, last_arg, pdffilename);
+  gsargv[n ++] = gspath;
+  gsargv[n ++] = "-q";
+  gsargv[n ++] = "-dNOPAUSE";
+  gsargv[n ++] = "-dBATCH";
+  gsargv[n ++] = "-dSAFER";
+  gsargv[n ++] = "-dNOINTERPOLATE";
+  gsargv[n ++] = "-dNOMEDIAATTRS";
+  gsargv[n ++] = "-sDEVICE=pdfwrite";
+  gsargv[n ++] = "-dShowAcroForm";
+  gsargv[n ++] = filename_arg;
+  if (first_arg[0])
+    gsargv[n ++] = first_arg;
+  if (last_arg[0])
+    gsargv[n ++] = last_arg;
+  gsargv[n ++] = (char *)gs_file_name(pdffilename, inname, sizeof(inname));
+  gsargv[n] = NULL;
 
-  FILE *pd = popen(gscommand, "r");
+  FILE *pd = open_argv_process(gsargv, 0, &pid);
   if (!pd)
     rip_die(EXIT_STARVED, "Could not run ghostscript to extract the pages!\n");
-  
-  if (pclose(pd) != 0)
+
+  if (close_argv_process(pd, pid) != 0)
     _log("Warning: ghostscript process exited with non-zero status\n");
 
   return (1);
@@ -167,6 +258,7 @@ render_pages_with_generic_command(dstr_t *cmd,
 				  int lastpage)
 {
   char tmpfile[PATH_MAX];
+  char *quoted;
   int result;
 
   // TODO it might be a good idea to give pdf command lines the possibility
@@ -174,13 +266,19 @@ render_pages_with_generic_command(dstr_t *cmd,
   // (maybe introduce a &filename; ??)
 
   if (lastpage < 0)  // i.e. print the whole document
-    dstrcatf(cmd, " < %s", filename);
+  {
+    quoted = shell_quote(filename);
+    dstrcatf(cmd, " < %s", quoted);
+    free(quoted);
+  }
   else
   {
     if (!pdf_extract_pages(tmpfile, filename, firstpage, lastpage))
       rip_die(EXIT_STARVED,
 	      "Could not run ghostscript to extract the pages!\n");
-    dstrcatf(cmd, " < %s", tmpfile);
+    quoted = shell_quote(tmpfile);
+    dstrcatf(cmd, " < %s", quoted);
+    free(quoted);
   }
 
   result = start_renderer(cmd->data);
@@ -205,7 +303,8 @@ render_pages_with_ghostscript(dstr_t *cmd,
 			      int firstpage,
 			      int lastpage)
 {
-  char *p;
+  char *p, *quoted;
+  char name[PATH_MAX + 2];
 
   // No need to create a temporary file, just give ghostscript the file and
   // first/last page on the command line
@@ -217,7 +316,9 @@ render_pages_with_ghostscript(dstr_t *cmd,
   if (*p == '-')
     *p = ' ';
 
-  dstrinsertf(cmd, end_gs_cmd, " %s ", filename);
+  quoted = shell_quote(gs_file_name(filename, name, sizeof(name)));
+  dstrinsertf(cmd, end_gs_cmd, " %s ", quoted);
+  free(quoted);
 
   dstrinsertf(cmd, start_gs_cmd + 2, " -dShowAcroForm ");
 
