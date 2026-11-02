@@ -62,7 +62,10 @@ shell_quote(const char *s)
     len += (*p == '\'') ? 4 : 1;
 
   if ((q = malloc(len)) == NULL)
+  {
     rip_die(EXIT_STARVED, "Not enough memory to quote a file name\n");
+    return (NULL);
+  }
 
   r = q;
   *r++ = '\'';
@@ -107,8 +110,11 @@ pdf_count_pages(const char *filename)
 
   FILE *pd = open_argv_process(gspath, gsargv, 0, &pid);
   if (pd == NULL)
+  {
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
+    return (-1);
+  }
 
   // Leave room for a terminator: if ghostscript's output filled the whole
   // buffer, sscanf()/memchr() below must not run past the end looking for
@@ -242,7 +248,10 @@ pdf_extract_pages(char filename[PATH_MAX],
 
   FILE *pd = open_argv_process(gspath, gsargv, 0, &pid);
   if (!pd)
+  {
     rip_die(EXIT_STARVED, "Could not run ghostscript to extract the pages!\n");
+    return (0);
+  }
 
   if (close_argv_process(pd, pid) != 0)
     _log("Warning: ghostscript process exited with non-zero status\n");
