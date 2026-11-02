@@ -768,7 +768,7 @@ paramvalues_from_string(option_t *opt,
 	else if (!strcasecmp(param->name, "height"))
 	  paramvalues[i] = get_valid_param_string_int(opt, param, (int)height);
 	else
-	  paramvalues[i] = !isempty(param->min) ? param->min : "-999999";
+	  paramvalues[i] = strdup(!isempty(param->min) ? param->min : "-999999");
 	if (!paramvalues[i])
 	{
 	  free_paramvalues(opt, paramvalues);
