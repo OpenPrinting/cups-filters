@@ -105,7 +105,7 @@ pdf_count_pages(const char *filename)
     NULL
   };
 
-  FILE *pd = open_argv_process(gsargv, 0, &pid);
+  FILE *pd = open_argv_process(gspath, gsargv, 0, &pid);
   if (pd == NULL)
     rip_die(EXIT_STARVED,
 	    "Failed to execute ghostscript to determine number of input pages!\n");
@@ -240,7 +240,7 @@ pdf_extract_pages(char filename[PATH_MAX],
   gsargv[n ++] = (char *)gs_file_name(pdffilename, inname, sizeof(inname));
   gsargv[n] = NULL;
 
-  FILE *pd = open_argv_process(gsargv, 0, &pid);
+  FILE *pd = open_argv_process(gspath, gsargv, 0, &pid);
   if (!pd)
     rip_die(EXIT_STARVED, "Could not run ghostscript to extract the pages!\n");
 
