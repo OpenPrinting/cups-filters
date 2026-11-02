@@ -94,6 +94,9 @@ wait_for_renderer()
 {
   int status;
 
+  if (kid3 == 0)
+    return (1);
+
   waitpid(kid3, &status, 0);
 
   if (!WIFEXITED(status))
@@ -138,13 +141,11 @@ pdf_extract_pages(char filename[PATH_MAX],
   first_arg[0] = '\0';
   last_arg[0] = '\0';
   if (first > 1)
-  {
     snprintf(first_arg, 50, "-dFirstPage=%d", first);
-    if (last >= first)
-      snprintf(last_arg, 50, "-dLastPage=%d", last);
-  }
+  if (last >= first)
+    snprintf(last_arg, 50, "-dLastPage=%d", last);
 
-  snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dSAFER -dNOINTERPOLATE -dNOMEDIAATTRS"
+  snprintf(gscommand, CMDLINE_MAX, "%s -q -dNOPAUSE -dBATCH -dSAFER -dNOINTERPOLATE -dNOMEDIAATTRS "
 	   "-sDEVICE=pdfwrite -dShowAcroForm %s %s %s %s",
 	   gspath, filename_arg, first_arg, last_arg, pdffilename);
 
@@ -184,8 +185,13 @@ render_pages_with_generic_command(dstr_t *cmd,
 
   result = start_renderer(cmd->data);
 
+  // The renderer reads the extracted pages through its shell's "<", so let
+  // it finish before removing the file
   if (lastpage > 0)
+  {
+    wait_for_renderer();
     unlink(tmpfile);
+  }
 
   return (result);
 }
@@ -215,23 +221,21 @@ render_pages_with_ghostscript(dstr_t *cmd,
 
   dstrinsertf(cmd, start_gs_cmd + 2, " -dShowAcroForm ");
 
-  if (firstpage > 1)
-  {
-    if (lastpage >= firstpage)
-      dstrinsertf(cmd, start_gs_cmd +2,
-		  " -dFirstPage=%d -dLastPage=%d ",
-		  firstpage, lastpage);
-    else
-      dstrinsertf(cmd, start_gs_cmd +2,
-		  " -dFirstPage=%d ", firstpage);
-  }
+  if (lastpage >= firstpage)
+    dstrinsertf(cmd, start_gs_cmd +2,
+		" -dFirstPage=%d -dLastPage=%d ",
+		firstpage, lastpage);
+  else if (firstpage > 1)
+    dstrinsertf(cmd, start_gs_cmd +2,
+		" -dFirstPage=%d ", firstpage);
 
   return (start_renderer(cmd->data));
 }
 
 
 static int
-render_pages(const char *filename,
+render_pages(int optset,
+	     const char *filename,
 	     int firstpage,
 	     int lastpage)
 {
@@ -239,7 +243,7 @@ render_pages(const char *filename,
   size_t start, end;
   int result;
 
-  build_commandline(optionset("currentpage"), cmd, 1);
+  build_commandline(optset, cmd, 1);
 
   extract_command(&start, &end, cmd->data, "gs");
   if (start == end)
@@ -286,19 +290,24 @@ print_pdf_file(const char *filename)
   firstpage = 1;
   for (i = 1; i <= page_count; i++)
   {
+    // Start from the job's options, so that options given for earlier
+    // pages only don't carry over
+    optionset_copy_values(optionset("header"), optionset("currentpage"));
     set_options_for_page(optionset("currentpage"), i);
     if (!optionset_equal(optionset("currentpage"),
 			 optionset("previouspage"), 1))
     {
-      render_pages(filename, firstpage, i);
+      // Render the pages before this one with their own options
+      if (i > 1)
+	render_pages(optionset("previouspage"), filename, firstpage, i - 1);
       firstpage = i;
     }
     optionset_copy_values(optionset("currentpage"), optionset("previouspage"));
   }
   if (firstpage == 1)
-    render_pages(filename, 1, -1); // Render the whole document
+    render_pages(optionset("currentpage"), filename, 1, -1); // Whole document
   else
-    render_pages(filename, firstpage, page_count);
+    render_pages(optionset("currentpage"), filename, firstpage, page_count);
 
   wait_for_renderer();
 
