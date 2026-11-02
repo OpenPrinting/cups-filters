@@ -1240,12 +1240,17 @@ option_set_value(option_t *opt,
 {
   value_t *val = option_assure_value(opt, optionset);
   char *newvalue;
-  choice_t *choice;
+  choice_t *choice, *compchoice = NULL;
   option_t *fromopt;
 
   newvalue = get_valid_value_string(opt, value);
   if (!newvalue)
     return (0);
+
+  // "value" can be val->value itself (read_ppd_file() validates the
+  // defaults this way), so look up the composite choice before freeing it
+  if (option_is_composite(opt))
+    compchoice = option_find_choice(opt, value);
 
   free(val->value);
   val->value = NULL;
@@ -1262,13 +1267,9 @@ option_set_value(option_t *opt,
   else
     val->value = newvalue;
 
-  if (option_is_composite(opt))
-  {
-    // set dependent values
-    choice = option_find_choice(opt, value);
-    if (choice && !isempty(choice->command))
-      composite_set_values(opt, optionset, choice->command);
-  }
+  // set dependent values
+  if (compchoice && !isempty(compchoice->command))
+    composite_set_values(opt, optionset, compchoice->command);
   return (1);
 }
 
