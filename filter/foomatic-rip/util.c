@@ -924,7 +924,7 @@ dstrncat(dstr_t *ds,
     dstr_grow_(ds);
   }
 
-  strncpy(&ds->data[ds->len], src, n);
+  memcpy(&ds->data[ds->len], src, n);
   ds->len = needed;
   ds->data[ds->len] = '\0';
 }
