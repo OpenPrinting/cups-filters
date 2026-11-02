@@ -1928,10 +1928,8 @@ read_ppd_file(const char *filename)
   dstrassure(value, 256);
 
   qualifier_data = list_create();
-  while (!feof(fh))
+  while ((tmp = fgets(line, 256, fh)) != NULL)
   {
-    tmp = fgets(line, 256, fh);
-
     if (line[0] != '*' || startswith(line, "*%"))
       continue;
 
@@ -1965,7 +1963,10 @@ read_ppd_file(const char *filename)
       else
 	break;
 
-      tmp = fgets(line, 256, fh);
+      // Stop at the end of the file, otherwise an unclosed quote or a
+      // trailing "&&" appends the last line again forever
+      if ((tmp = fgets(line, 256, fh)) == NULL)
+	break;
       dstrcat(value, line);
       dstrremovenewline(value);
     }
