@@ -34,9 +34,11 @@ pid_t create_pipe_process(const char *name, FILE *src, FILE *dest,
 
 int wait_for_process(int pid);
 
-// Run argv[0] with the arguments in argv[] (no shell involved) and return a
-// stream for reading its standard output, or NULL on error
-FILE *open_argv_process(char *const argv[], int stderr_to_stdout, pid_t *pid);
+// Run program with the arguments in argv[] (no shell involved, argv[0] is
+// the program name shown to it) and return a stream for reading its standard
+// output, or NULL on error
+FILE *open_argv_process(const char *program, char *const argv[],
+			int stderr_to_stdout, pid_t *pid);
 // Close the stream and return the exit status (see waitpid(2)), -1 on error
 int close_argv_process(FILE *fp, pid_t pid);
 

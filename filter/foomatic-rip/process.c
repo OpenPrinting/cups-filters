@@ -290,7 +290,8 @@ run_system_process(const char *name,
 //
 
 FILE *
-open_argv_process(char *const argv[],
+open_argv_process(const char *program,
+		  char *const argv[],
 		  int stderr_to_stdout,
 		  pid_t *pid)
 {
@@ -317,8 +318,8 @@ open_argv_process(char *const argv[],
       _exit(127);
     if (fds[1] != STDOUT_FILENO && fds[1] != STDERR_FILENO)
       close(fds[1]);
-    execvp(argv[0], argv);
-    fprintf(stderr, "Cannot run %s: %s\n", argv[0], strerror(errno));
+    execvp(program, argv);
+    fprintf(stderr, "Cannot run %s: %s\n", program, strerror(errno));
     _exit(127);
   }
 

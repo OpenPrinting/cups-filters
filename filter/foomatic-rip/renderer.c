@@ -41,7 +41,7 @@ test_gs_output_redirection()
   };
 
   // stderr goes into the pipe too, like "2>&1" did with popen()
-  FILE *pd = open_argv_process(gsargv, 1, &pid);
+  FILE *pd = open_argv_process(gspath, gsargv, 1, &pid);
   if (!pd)
   {
     _log("Failed to execute ghostscript!\n");
