@@ -79,7 +79,7 @@ enum filetype {
 
 // logging and exiting...
 void _log(const char* msg, ...);
-void rip_die(int status, const char *msg, ...);
+_Noreturn void rip_die(int status, const char *msg, ...);
 int redirect_log_to_stderr();
 void close_log();
 
