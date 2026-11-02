@@ -732,13 +732,13 @@ unhexify(char *dest,
 	cstr[0] = *psrc++;
 	if (!*psrc)
 	{
-	  printf("Error replacing hex notation in %s!\n", src);
+	  _log("Error replacing hex notation in %s!\n", src);
 	  break;
 	}
 	cstr[1] = *psrc++;
 	if (!isxdigit(cstr[0]) || !isxdigit(cstr[1]))
 	{
-	  printf("Error replacing hex notation in %s!\n", src);
+	  _log("Error replacing hex notation in %s!\n", src);
 	  break;
 	}
 	*pdest++ = (char)strtol(cstr, NULL, 16);
