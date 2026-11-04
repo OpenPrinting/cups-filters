@@ -1643,7 +1643,11 @@ param_set_allowed_chars(param_t *param,
 {
   char rxstr[256], tmp[128];
 
-  param->allowedchars = malloc(sizeof(regex_t));
+  if ((param->allowedchars = malloc(sizeof(regex_t))) == NULL)
+  {
+    _log("Unable to allocate memory for allowed-characters regexp\n");
+    return (0);
+  }
   unhtmlify(tmp, 128, value);
   snprintf(rxstr, 256, "^[%s]*$", tmp);
   if (regcomp(param->allowedchars, rxstr, 0) != 0)
@@ -1662,7 +1666,11 @@ param_set_allowed_regexp(param_t *param,
 {
   char tmp[128];
 
-  param->allowedregexp = malloc(sizeof(regex_t));
+  if ((param->allowedregexp = malloc(sizeof(regex_t))) == NULL)
+  {
+    _log("Unable to allocate memory for allowed-regexp\n");
+    return (0);
+  }
   unhtmlify(tmp, 128, value);
   if (regcomp(param->allowedregexp, tmp, 0) != 0)
   {
