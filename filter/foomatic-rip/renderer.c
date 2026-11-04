@@ -385,6 +385,8 @@ write_merged_jcl_options(FILE *stream,
   // be arbitrarily long, so size the buffer to fit it instead of copying
   // into a fixed-size one (was a stack buffer overflow for a long prefix).
   header = malloc(p - original_opts[0] + 1);
+  if (!header)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   memcpy(header, original_opts[0], p - original_opts[0]);
   header[p - original_opts[0]] = '\0';
   fprintf(stream, "%s", header);
@@ -468,6 +470,8 @@ exec_kid4(FILE *in,
 
       pos = strcspn(jclprepend[0], " \t\n\r");
       jclstr = malloc(pos +1);
+      if (!jclstr)
+        rip_die(1, "ERROR: out of memory (malloc failed)");
       strncpy(jclstr, jclprepend[0], pos);
       jclstr[pos] = '\0';
 
