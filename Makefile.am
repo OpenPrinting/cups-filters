@@ -243,7 +243,8 @@ check_PROGRAMS = \
 TESTS = \
 	test-rastertopclx-format-string \
 	test-rastertoescpx-page-size \
-	filter/test-gstopdf-ocr.sh
+	filter/test-gstopdf-ocr.sh \
+	filter/test-foomatic-rip-feature-comments.sh
 
 # Not reliable bash script
 #TESTS += filter/test.sh
@@ -252,6 +253,7 @@ EXTRA_DIST += \
 	$(genfilterscripts) \
 	filter/test.sh \
 	filter/test-gstopdf-ocr.sh \
+	filter/test-foomatic-rip-feature-comments.sh \
 	filter/test-rastertopclx-format-string.c \
 	filter/test-rastertoescpx-page-size.c
 
