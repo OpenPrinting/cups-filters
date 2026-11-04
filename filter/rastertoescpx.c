@@ -1113,7 +1113,11 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
     // Allocate memory for a single line of graphics...
     //
 
-    ptr = calloc(PrinterPlanes, DotBufferSize);
+    if ((ptr = calloc(PrinterPlanes, DotBufferSize)) == NULL)
+    {
+      fputs("ERROR: Unable to allocate dot buffer\n", stderr);
+      exit(1);
+    }
 
     for (plane = 0; plane < PrinterPlanes; plane ++, ptr += DotBufferSize)
       DotBuffers[plane] = ptr;
@@ -1143,11 +1147,20 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   InputBuffer      = malloc(header->cupsWidth * PrinterPlanes * 2);
   OutputBuffers[0] = malloc(PrinterPlanes * header->cupsWidth);
 
+  if (!PixelBuffer || !InputBuffer || !OutputBuffers[0])
+  {
+    fputs("ERROR: Unable to allocate page buffer\n", stderr);
+    exit(1);
+  }
+
   for (i = 1; i < PrinterPlanes; i ++)
     OutputBuffers[i] = OutputBuffers[0] + i * header->cupsWidth;
 
-  if (RGB)
-    CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes);
+  if (RGB && (CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes)) == NULL)
+  {
+    fputs("ERROR: Unable to allocate CMYK buffer\n", stderr);
+    exit(1);
+  }
 
   if (DotBufferSize <= 0 ||
       (size_t)DotBufferSize > SIZE_MAX / 10 / (size_t)DotRowMax)

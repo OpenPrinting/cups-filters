@@ -854,18 +854,31 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
   // Allocate memory for the page...
   //
 
-  PixelBuffer = malloc(header->cupsBytesPerLine);
+  if ((PixelBuffer = malloc(header->cupsBytesPerLine)) == NULL)
+  {
+    fputs("ERROR: Unable to allocate pixel buffer\n", stderr);
+    exit(1);
+  }
 
   if (OutputMode == OUTPUT_DITHERED)
   {
     InputBuffer      = malloc(header->cupsWidth * PrinterPlanes * 2);
     OutputBuffers[0] = malloc(PrinterPlanes * header->cupsWidth);
 
+    if (!InputBuffer || !OutputBuffers[0])
+    {
+      fputs("ERROR: Unable to allocate page buffer\n", stderr);
+      exit(1);
+    }
+
     for (i = 1; i < PrinterPlanes; i ++)
       OutputBuffers[i] = OutputBuffers[0] + i * header->cupsWidth;
 
-    if (RGB)
-      CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes);
+    if (RGB && (CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes)) == NULL)
+    {
+      fputs("ERROR: Unable to allocate CMYK buffer\n", stderr);
+      exit(1);
+    }
 
     for (plane = 0, DotBufferSize = 0; plane < PrinterPlanes; plane ++)
     {
@@ -873,16 +886,28 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
       DotBufferSize         += DotBufferSizes[plane];
     }
 
-    DotBuffers[0] = malloc(DotBufferSize);
+    if ((DotBuffers[0] = malloc(DotBufferSize)) == NULL)
+    {
+      fputs("ERROR: Unable to allocate dot buffer\n", stderr);
+      exit(1);
+    }
     for (plane = 1; plane < PrinterPlanes; plane ++)
       DotBuffers[plane] = DotBuffers[plane - 1] + DotBufferSizes[plane - 1];
   }
 
-  if (header->cupsCompression)
-    CompBuffer = calloc(DotBufferSize * 4, sizeof(unsigned char));
+  if (header->cupsCompression &&
+      (CompBuffer = calloc(DotBufferSize * 4, sizeof(unsigned char))) == NULL)
+  {
+    fputs("ERROR: Unable to allocate compression buffer\n", stderr);
+    exit(1);
+  }
 
-  if (header->cupsCompression >= 3)
-    SeedBuffer = calloc(DotBufferSize, sizeof(unsigned char));
+  if (header->cupsCompression >= 3 &&
+      (SeedBuffer = calloc(DotBufferSize, sizeof(unsigned char))) == NULL)
+  {
+    fputs("ERROR: Unable to allocate seed buffer\n", stderr);
+    exit(1);
+  }
 
   SeedInvalid = 1;
 
