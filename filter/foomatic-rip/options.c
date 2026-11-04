@@ -633,7 +633,12 @@ get_valid_param_string(option_t *opt,
 	       str, opt->name, param->name, imax);
 	  return (NULL);
 	}
-	result = malloc(32);
+	if ((result = malloc(32)) == NULL)
+	{
+	  _log("Unable to allocate memory for parameter \"%s\" of option \"%s\"\n",
+	       param->name, opt->name);
+	  return (NULL);
+	}
 	snprintf(result, 32, "%d", i);
 	return (result);
 
@@ -656,7 +661,12 @@ get_valid_param_string(option_t *opt,
 	       str, opt->name, param->name, fmax);
 	  return (NULL);
 	}
-	result = malloc(32);
+	if ((result = malloc(32)) == NULL)
+	{
+	  _log("Unable to allocate memory for parameter \"%s\" of option \"%s\"\n",
+	       param->name, opt->name);
+	  return (NULL);
+	}
 	snprintf(result, 32, "%f", f);
 	return (result);
 
