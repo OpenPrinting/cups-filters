@@ -839,11 +839,11 @@ _print_ps(stream_t *stream)
 	      dstrcpy(tmp, line->data);
 	      p = strtok(tmp->data, " \t"); // %%BeginFeature:
 	      p = strtok(NULL, " \t="); // Option
-	      if (*p == '*') p++;
-	      strlcpy(optionname, p, 128);
+	      if (p && *p == '*') p++;
+	      strlcpy(optionname, p ? p : "", 128);
 	      p = strtok(NULL, " \t\r\n"); // value
 	      fromcomposite = 0;
-	      strlcpy(value, p, 128);
+	      strlcpy(value, p ? p : "", 128);
 	    }
 	    else
 	    { // LT_FOOMATIC_RIP_OPTION_SETTING
@@ -851,16 +851,16 @@ _print_ps(stream_t *stream)
 	      p = strstr(tmp->data, "FoomaticRIPOptionSetting:");
 	      p = strtok(p, " \t");  // FoomaticRIPOptionSetting
 	      p = strtok(NULL, " \t="); // Option
-	      strlcpy(optionname, p, 128);
+	      strlcpy(optionname, p ? p : "", 128);
 	      p = strtok(NULL, " \t\r\n"); // value
-	      if (*p == '@')
+	      if (p && *p == '@')
 	      { // fromcomposite
 		p++;
 		fromcomposite = 1;
 	      }
 	      else
 		fromcomposite = 0;
-	      strlcpy(value, p, 128);
+	      strlcpy(value, p ? p : "", 128);
 	    }
 
 	    // Mark that we are in a "Feature" section
