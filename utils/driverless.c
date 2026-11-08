@@ -80,6 +80,10 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
         device_id[2048];	/* 1284 device ID */
 
   service_uri = (char *)malloc(2048*(sizeof(char)));
+  if (!service_uri) {
+    fprintf(stderr, "ERROR: Unable to allocate memory for service URI.\n");
+    return;
+  }
   /* Mark all the fields of the output of ippfind */
   ptr = ippfind_output;
   if (reg_type_no < 1) {
@@ -501,6 +505,11 @@ list_printers (int mode, int reg_type_no, int isFax)
 	*ptr = '\0';
 	ptr ++;
 	ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+	if (!ippfind_output) {
+	  fprintf(stderr, "ERROR: Unable to allocate memory for ippfind output.\n");
+	  exit_status = 1;
+	  goto error;
+	}
 	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
 	cupsArrayAdd(service_uri_list_ipps, ippfind_output);
       } else if ((!strncasecmp(ptr, "ipp", 3) && ptr[3] == '\t')) {
@@ -508,6 +517,11 @@ list_printers (int mode, int reg_type_no, int isFax)
 	*ptr = '\0';
 	ptr ++;
 	ippfind_output = (char *)malloc(MAX_OUTPUT_LEN*(sizeof(char)));
+	if (!ippfind_output) {
+	  fprintf(stderr, "ERROR: Unable to allocate memory for ippfind output.\n");
+	  exit_status = 1;
+	  goto error;
+	}
 	snprintf(ippfind_output, MAX_OUTPUT_LEN, "%s", ptr);
 	cupsArrayAdd(service_uri_list_ipp, ippfind_output);
       } else
