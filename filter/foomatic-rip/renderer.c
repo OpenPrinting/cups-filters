@@ -347,6 +347,11 @@ write_merged_jcl_options(FILE *stream,
 			 size_t readbinarybytes,
 			 const char *jclstr)
 {
+  // cppcheck-suppress ctunullpointer
+  // jclstr's only caller (exec_kid4()) checks its malloc() result and calls
+  // the _Noreturn rip_die() (see util.h) on failure before ever reaching
+  // this call, so jclstr can't actually be NULL here; cppcheck's cross-TU
+  // null check doesn't see that through the call boundary.
   char *p = strstr(original_opts[0], jclstr);
   char *header = NULL;
   char **optsp1 = NULL, **optsp2 = NULL;
