@@ -862,8 +862,13 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
 
   if (OutputMode == OUTPUT_DITHERED)
   {
-    InputBuffer      = malloc(header->cupsWidth * PrinterPlanes * 2);
-    OutputBuffers[0] = malloc(PrinterPlanes * header->cupsWidth);
+    // cupsWidth/PrinterPlanes computed in size_t: a large job-requested
+    // page width can otherwise overflow the multiplication before it is
+    // widened for malloc()'s argument, under-allocating these buffers
+    // while the rest of this function still writes the real, unwrapped
+    // width's worth of data into them.
+    InputBuffer      = malloc((size_t)header->cupsWidth * (size_t)PrinterPlanes * 2);
+    OutputBuffers[0] = malloc((size_t)PrinterPlanes * (size_t)header->cupsWidth);
 
     if (!InputBuffer || !OutputBuffers[0])
     {
@@ -874,7 +879,7 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
     for (i = 1; i < PrinterPlanes; i ++)
       OutputBuffers[i] = OutputBuffers[0] + i * header->cupsWidth;
 
-    if (RGB && (CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes)) == NULL)
+    if (RGB && (CMYKBuffer = malloc((size_t)header->cupsWidth * (size_t)PrinterPlanes)) == NULL)
     {
       fputs("ERROR: Unable to allocate CMYK buffer\n", stderr);
       exit(1);
