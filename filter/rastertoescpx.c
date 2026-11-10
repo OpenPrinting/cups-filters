@@ -1144,8 +1144,13 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   //
 
   PixelBuffer      = malloc(header->cupsBytesPerLine);
-  InputBuffer      = malloc(header->cupsWidth * PrinterPlanes * 2);
-  OutputBuffers[0] = malloc(PrinterPlanes * header->cupsWidth);
+  // cupsWidth/PrinterPlanes are computed in size_t here, not plain
+  // unsigned/int: a large job-requested page width can otherwise overflow
+  // the multiplication before it is widened for malloc()'s argument,
+  // under-allocating these buffers while the rest of this function still
+  // writes the real, unwrapped width's worth of data into them.
+  InputBuffer      = malloc((size_t)header->cupsWidth * (size_t)PrinterPlanes * 2);
+  OutputBuffers[0] = malloc((size_t)PrinterPlanes * (size_t)header->cupsWidth);
 
   if (!PixelBuffer || !InputBuffer || !OutputBuffers[0])
   {
@@ -1156,7 +1161,7 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   for (i = 1; i < PrinterPlanes; i ++)
     OutputBuffers[i] = OutputBuffers[0] + i * header->cupsWidth;
 
-  if (RGB && (CMYKBuffer = malloc(header->cupsWidth * PrinterPlanes)) == NULL)
+  if (RGB && (CMYKBuffer = malloc((size_t)header->cupsWidth * (size_t)PrinterPlanes)) == NULL)
   {
     fputs("ERROR: Unable to allocate CMYK buffer\n", stderr);
     exit(1);
