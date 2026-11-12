@@ -133,7 +133,7 @@ main(int  argc,				// I - Number of command-line args
     // Cap instead of letting a pathologically long digit run overflow
     // a signed int (undefined behavior); the extra digits are still
     // consumed so parsing of the rest of the URI isn't affected.
-    if (att < INT_MAX / 10)
+    if (att < INT_MAX / 100)
       att = att * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
@@ -143,7 +143,7 @@ main(int  argc,				// I - Number of command-line args
   delay = 0;
   while (isdigit(*ptr))
   {
-    if (delay < INT_MAX / 10)
+    if (delay < INT_MAX / 100)
       delay = delay * 10 + (int)(*ptr) - 48;
     ptr ++;
   }
