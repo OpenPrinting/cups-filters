@@ -347,11 +347,13 @@ write_merged_jcl_options(FILE *stream,
 			 size_t readbinarybytes,
 			 const char *jclstr)
 {
-  // cppcheck-suppress ctunullpointer
   // jclstr's only caller (exec_kid4()) checks its malloc() result and calls
   // the _Noreturn rip_die() (see util.h) on failure before ever reaching
-  // this call, so jclstr can't actually be NULL here; cppcheck's cross-TU
-  // null check doesn't see that through the call boundary.
+  // this call, so jclstr can't actually be NULL here. Depending on whether
+  // cppcheck's whole-program (CTU) pass runs, it reports this redundant
+  // check under one of two different IDs, so both are suppressed.
+  // cppcheck-suppress nullPointerRedundantCheck
+  // cppcheck-suppress ctunullpointer
   char *p = strstr(original_opts[0], jclstr);
   char *header = NULL;
   char **optsp1 = NULL, **optsp2 = NULL;
@@ -392,8 +394,13 @@ write_merged_jcl_options(FILE *stream,
   header = malloc(p - original_opts[0] + 1);
   if (!header)
     rip_die(1, "ERROR: out of memory (malloc failed)");
+  // The rip_die() call above is _Noreturn, so header can't be NULL below;
+  // cppcheck doesn't fold that through the three separate uses.
+  // cppcheck-suppress nullPointerRedundantCheck
   memcpy(header, original_opts[0], p - original_opts[0]);
+  // cppcheck-suppress nullPointerRedundantCheck
   header[p - original_opts[0]] = '\0';
+  // cppcheck-suppress nullPointerRedundantCheck
   fprintf(stream, "%s", header);
   free(header);
   header = NULL;
@@ -477,7 +484,10 @@ exec_kid4(FILE *in,
       jclstr = malloc(pos +1);
       if (!jclstr)
         rip_die(1, "ERROR: out of memory (malloc failed)");
+      // rip_die() above is _Noreturn, so jclstr can't be NULL here.
+      // cppcheck-suppress nullPointerRedundantCheck
       strncpy(jclstr, jclprepend[0], pos);
+      // cppcheck-suppress nullPointerRedundantCheck
       jclstr[pos] = '\0';
 
       jclheader = read_jcl_lines(in, jclstr, &readbinarybytes);
