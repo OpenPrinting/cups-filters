@@ -100,11 +100,14 @@ pdf_count_pages(const char *filename)
   // need to be quoted, neither for a shell nor inside the PostScript code
   snprintf(file_arg, sizeof(file_arg), "-sFoomaticPDFFile=%s",
 	   gs_file_name(filename, name, sizeof(name)));
+  // Only opening the file needs -dNOSAFER, switch to SAFER before the PDF
+  // (job data) gets interpreted, like Ghostscript's own pdf2dsc.ps does
   char *gsargv[] =
   {
     gspath, "-dNODISPLAY", "-dNOSAFER", "-dNOPAUSE", "-q", file_arg, "-c",
-    "/pdffile FoomaticPDFFile (r) file runpdfbegin (PageCount: ) print "
-    "pdfpagecount = quit",
+    "/pdffile FoomaticPDFFile (r) file def "
+    "systemdict /.setsafe known { .setsafe } if "
+    "pdffile runpdfbegin (PageCount: ) print pdfpagecount = quit",
     NULL
   };
 
