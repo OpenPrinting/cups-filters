@@ -636,7 +636,11 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
       //
 
       printf("IN;");
-      printf("MG\"%d %s %s\";", job_id, user, title);
+      printf("MG\"%d ", job_id);
+      pjl_puts(user);
+      putchar(' ');
+      pjl_puts(title);
+      printf("\";");
     }
 
     //
