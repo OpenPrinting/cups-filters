@@ -51,14 +51,13 @@
 
 #define pjl_escape()\
 	printf("\033%%-12345X@PJL\r\n")
-#define pjl_set_job(job_id,user,title)\
-	printf("@PJL JOB NAME = \"%s\" DISPLAY = \"%d %s %s\"\r\n", \
-	       (title), (job_id), (user), (title))
 #define pjl_enter_language(lang)\
 	printf("@PJL ENTER LANGUAGE=%s\r\n", (lang))
 
 extern void	pcl_set_media_size(ppd_file_t *ppd, float width, float length);
 extern void	pcl_write(const char *format, int page_count);
+extern void	pjl_puts(const char *s);
+extern void	pjl_set_job(int job_id, const char *user, const char *title);
 extern void	pjl_write(const char *format,
 		          const char *value, int job_id,
                 	  const char *user, const char *title,

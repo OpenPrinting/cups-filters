@@ -1,5 +1,6 @@
 //
-// Regression test for rastertopclx EndJob format string handling.
+// Regression test for rastertopclx EndJob format string handling and
+// job strings in PJL output.
 //
 // Licensed under Apache License v2.0. See the file "LICENSE" for more
 // information.
@@ -234,6 +235,75 @@ expect_page_count_substitution(void)
   return (0);
 }
 
+static int
+expect_pjl_job_strings_sanitized(void)
+{
+  static const char *title =
+    "x\" DISPLAY = \"y\"\r\n@PJL FSDELETE NAME = \"0:\\a\"\r\n\033%-12345X";
+  static const char *expected =
+    "@PJL JOB NAME = \"x DISPLAY = y@PJL FSDELETE NAME = 0:\\a%-12345X\""
+    " DISPLAY = \"1 user@PJL SET x DISPLAY = y@PJL FSDELETE NAME = 0:\\a"
+    "%-12345X\"\r\n"
+    "@PJL COMMENT x DISPLAY = y@PJL FSDELETE NAME = 0:\\a%-12345X\r\n";
+  FILE *fp;
+  int saved_stdout;
+  char output[512];
+  size_t output_len;
+
+  if ((fp = tmpfile()) == NULL)
+  {
+    perror("tmpfile");
+    return (1);
+  }
+
+  fflush(stdout);
+
+  saved_stdout = dup(STDOUT_FILENO);
+  if (saved_stdout < 0 || dup2(fileno(fp), STDOUT_FILENO) < 0)
+  {
+    perror("dup");
+    fclose(fp);
+    return (1);
+  }
+
+  pjl_set_job(1, "user\r\n@PJL SET", title);
+  pjl_write("@PJL COMMENT %t%n", NULL, 1, "user", title, 0, NULL);
+
+  fflush(stdout);
+
+  if (dup2(saved_stdout, STDOUT_FILENO) < 0)
+  {
+    perror("dup2 restore");
+    close(saved_stdout);
+    fclose(fp);
+    return (1);
+  }
+
+  close(saved_stdout);
+
+  if (fseek(fp, 0, SEEK_SET))
+  {
+    perror("fseek");
+    fclose(fp);
+    return (1);
+  }
+
+  output_len = fread(output, 1, sizeof(output) - 1, fp);
+  fclose(fp);
+  output[output_len] = '\0';
+
+  if (strcmp(output, expected))
+  {
+    fputs("Job title/user not sanitized in PJL output: ", stderr);
+    for (size_t i = 0; i < output_len; i ++)
+      fprintf(stderr, "%02x ", (unsigned char)output[i]);
+    fputc('\n', stderr);
+    return (1);
+  }
+
+  return (0);
+}
+
 int
 main(void)
 {
@@ -241,6 +311,9 @@ main(void)
     return (1);
 
   if (expect_page_count_substitution())
+    return (1);
+
+  if (expect_pjl_job_strings_sanitized())
     return (1);
 
   return (0);

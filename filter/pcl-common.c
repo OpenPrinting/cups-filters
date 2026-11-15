@@ -12,6 +12,9 @@
 //   pcl_set_media_size() - Set media size using the page size command.
 //   pcl_write()          - Write a PCL command string, performing safe
 //                          page-count substitutions as needed.
+//   pjl_puts()           - Write a job-supplied string into PJL or
+//                          HP-GL/2 output.
+//   pjl_set_job()        - Write the PJL JOB command.
 //   pjl_write()          - Write a PJL command string, performing
 //                          substitutions as needed.
 //
@@ -282,6 +285,46 @@ pcl_write(const char *format,		// I - Format string
 
 
 //
+// 'pjl_puts()' - Write a job-supplied string into PJL or HP-GL/2 output.
+//
+// The job title, user name and the other job attributes we substitute come
+// from the job submitter and can contain CR, LF, ESC or double quotes.  Drop
+// those so the string cannot end the quoted value or the command line and
+// inject further PJL commands or a UEL language switch.
+//
+
+void
+pjl_puts(const char *s)			// I - String to write
+{
+  if (!s)
+    return;
+
+  for (; *s; s ++)
+    if ((unsigned char)*s >= ' ' && *s != 0x7f && *s != '\"')
+      putchar(*s);
+}
+
+
+//
+// 'pjl_set_job()' - Write the PJL JOB command.
+//
+
+void
+pjl_set_job(int        job_id,		// I - Job ID
+            const char *user,		// I - Username
+            const char *title)		// I - Title
+{
+  fputs("@PJL JOB NAME = \"", stdout);
+  pjl_puts(title);
+  printf("\" DISPLAY = \"%d ", job_id);
+  pjl_puts(user);
+  putchar(' ');
+  pjl_puts(title);
+  fputs("\"\r\n", stdout);
+}
+
+
+//
 // 'pjl_write()' - Write a PJL command string, performing substitutions as
 //                 needed.
 //
@@ -334,13 +377,13 @@ pjl_write(const char    *format,	// I - Format string
         case 'b' :			// job-billing
 	    if ((optval = cupsGetOption("job-billing", num_options,
 	                                options)) != NULL)
-	      fputs(optval, stdout);
+	      pjl_puts(optval);
 	    break;
 
 	case 'h' :			// job-originating-host-name
 	    if ((optval = cupsGetOption("job-originating-host-name",
 	                                num_options, options)) != NULL)
-	      fputs(optval, stdout);
+	      pjl_puts(optval);
 	    break;
 
 	case 'j' :			// job-id
@@ -357,16 +400,15 @@ pjl_write(const char    *format,	// I - Format string
 	    break;
 
 	case 's' :			// "value"
-	    if (value)
-	      fputs(value, stdout);
+	    pjl_puts(value);
 	    break;
 
 	case 't' :			// job-name
-            fputs(title, stdout);
+            pjl_puts(title);
 	    break;
 
 	case 'u' :			// job-originating-user-name
-            fputs(user, stdout);
+            pjl_puts(user);
 	    break;
 
         case '?' :			// ?value:string;
