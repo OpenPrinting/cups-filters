@@ -31,6 +31,8 @@
 #include <ppd/ppd.h>
 #include <ppd/ppd-filter.h>
 #include <signal.h>
+#include <limits.h>
+#include <stdint.h>
 
 //
 // Output modes...
@@ -904,8 +906,20 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
       DotBuffers[plane] = DotBuffers[plane - 1] + DotBufferSizes[plane - 1];
   }
 
+  // Size the compression buffer in size_t.  For the non-dithered output
+  // modes DotBufferSize is taken straight from the job's cupsBytesPerLine, so
+  // a crafted raster can make the int product DotBufferSize * 4 overflow and
+  // wrap to a small value, leaving CompBuffer far smaller than the up-to-2x
+  // data OutputLine()/CompressData() later writes into it (heap overflow).
+  // rastertoescpx.c already guards its own compression buffer this way.
+  if (DotBufferSize < 0 || (size_t)DotBufferSize > SIZE_MAX / 4)
+  {
+    fputs("ERROR: Invalid compression buffer size\n", stderr);
+    exit(1);
+  }
+
   if (header->cupsCompression &&
-      (CompBuffer = calloc(DotBufferSize * 4, sizeof(unsigned char))) == NULL)
+      (CompBuffer = calloc((size_t)DotBufferSize * 4, sizeof(unsigned char))) == NULL)
   {
     fputs("ERROR: Unable to allocate compression buffer\n", stderr);
     exit(1);
