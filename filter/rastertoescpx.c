@@ -174,6 +174,7 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
   int		black_row_count,	// PPD black-head row count
 		black_row_step;		// PPD black-head row step
   size_t	comp_buffer_size;	// Size of compression buffer
+  unsigned	bytes_per_pixel;	// Input bytes per pixel for separation
   const float	default_lut[2] =	// Default dithering lookup table
 		{
 		  0.0,
@@ -258,6 +259,37 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
     fprintf(stderr,
             "ERROR: Unsupported cupsColorOrder %d for RGB; only CUPS_ORDER_CHUNKED is supported.\n",
             header->cupsColorOrder);
+    exit(1);
+  }
+
+  //
+  // ProcessLine() separates cupsWidth pixels of 8-bit data out of
+  // PixelBuffer, which is only cupsBytesPerLine long: 1 byte per pixel for
+  // W/K, 4 for CMYK and 3 for everything else. The raster reader only checks
+  // cupsBytesPerLine against cupsWidth * cupsBitsPerPixel, and cupsNumColors
+  // comes from the header, so reject a row that is too short for that.
+  //
+
+  switch (header->cupsColorSpace)
+  {
+    case CUPS_CSPACE_W :
+    case CUPS_CSPACE_K :
+        bytes_per_pixel = 1;
+	break;
+    case CUPS_CSPACE_CMYK :
+        bytes_per_pixel = 4;
+	break;
+    default :
+        bytes_per_pixel = 3;
+	break;
+  }
+
+  if (header->cupsBytesPerLine / bytes_per_pixel < header->cupsWidth)
+  {
+    fprintf(stderr,
+            "ERROR: cupsBytesPerLine (%u) is too short for cupsColorSpace %d at cupsWidth %u.\n",
+            header->cupsBytesPerLine, header->cupsColorSpace,
+            header->cupsWidth);
     exit(1);
   }
 
