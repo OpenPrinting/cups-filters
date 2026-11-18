@@ -132,6 +132,7 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
   const int	*order;			// Order to use
   int		xorigin,		// X origin of page
 		yorigin;		// Y origin of page
+  unsigned	bytes_per_pixel;	// Input bytes per pixel for separation
   static const float default_lut[2] =	// Default dithering lookup table
 		{
 		  0.0,
@@ -368,6 +369,38 @@ StartPage(cf_filter_data_t      *data,	// I - filter data
     //
 
     OutputMode = OUTPUT_DITHERED;
+
+    //
+    // ReadLine() separates cupsWidth pixels of 8-bit data out of PixelBuffer,
+    // which is only cupsBytesPerLine long: 1 byte per pixel for W/K, 4 for
+    // CMYK and 3 for everything else. The raster reader only checks
+    // cupsBytesPerLine against cupsWidth * cupsBitsPerPixel, and
+    // cupsNumColors comes from the header, so reject a row that is too short
+    // for that (the RGB check above does not cover the other color spaces).
+    //
+
+    switch (header->cupsColorSpace)
+    {
+      case CUPS_CSPACE_W :
+      case CUPS_CSPACE_K :
+          bytes_per_pixel = 1;
+	  break;
+      case CUPS_CSPACE_CMYK :
+          bytes_per_pixel = 4;
+	  break;
+      default :
+          bytes_per_pixel = 3;
+	  break;
+    }
+
+    if (header->cupsBytesPerLine / bytes_per_pixel < header->cupsWidth)
+    {
+      fprintf(stderr,
+              "ERROR: cupsBytesPerLine (%u) is too short for cupsColorSpace %d at cupsWidth %u.\n",
+              header->cupsBytesPerLine, header->cupsColorSpace,
+              header->cupsWidth);
+      return (0);
+    }
 
     //
     // Load the appropriate color profiles...
