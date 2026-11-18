@@ -1256,8 +1256,8 @@ CompressData(unsigned char *line,	// I - Data to compress
 
             start = line_ptr;
             count = 0;
-            while (*line_ptr != *seed &&
-                   line_ptr < line_end &&
+            while (line_ptr < line_end &&
+                   *line_ptr != *seed &&
                    count < 8)
             {
               line_ptr ++;
@@ -1513,10 +1513,10 @@ CompressData(unsigned char *line,	// I - Data to compress
 	    //
 
             start = line_ptr;
-            while (line_ptr[0] == seed[0] &&
+            while ((line_ptr + 2) < line_end &&
+                   line_ptr[0] == seed[0] &&
                    line_ptr[1] == seed[1] &&
-                   line_ptr[2] == seed[2] &&
-                   (line_ptr + 2) < line_end)
+                   line_ptr[2] == seed[2])
             {
               line_ptr += 3;
               seed += 3;
@@ -1532,10 +1532,10 @@ CompressData(unsigned char *line,	// I - Data to compress
 	    //
 
             start = line_ptr;
-            while ((line_ptr[0] != seed[0] ||
+            while ((line_ptr + 2) < line_end &&
+                   (line_ptr[0] != seed[0] ||
                     line_ptr[1] != seed[1] ||
-                    line_ptr[2] != seed[2]) &&
-                   (line_ptr + 2) < line_end)
+                    line_ptr[2] != seed[2]))
             {
               line_ptr += 3;
               seed += 3;
