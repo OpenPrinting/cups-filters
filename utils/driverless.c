@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <cups/cups.h>
+#include <cups/backend.h>
 #include <ppd/ppd.h>
 #include <cups/raster.h>
 #include <cupsfilters/ipp.h>
@@ -39,6 +40,17 @@ static int
 compare_service_uri(char *a,	char *b)
 {
   return (strcmp(a,b));
+}
+
+static void
+remove_quotes(char *s)
+{
+  char *d = s;
+
+  for (; *s; s ++)
+    if (*s != '\"')
+      *d++ = *s;
+  *d = '\0';
 }
 
 static int
@@ -314,6 +326,12 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
 	strncpy(make_and_model, model, sizeof(make_and_model) - 1);
 
       if (mode == 1) {
+	/* make, model and device ID come from the printer's DNS-SD TXT
+	   record and cups-driverd has no way to escape a '"' inside a
+	   quoted field, so drop them */
+	remove_quotes(make);
+	remove_quotes(make_and_model);
+	remove_quotes(device_id);
 	/* Only output the entry if we had this UUID not already */
 	if (!txt_uuid[0] || !cupsArrayFind(uuids, txt_uuid)) {
 	  /* Save UUID as if an entry with the same UUID appears again, it
@@ -336,9 +354,12 @@ listPrintersInArray(int reg_type_no, int mode, int isFax,
       } else {
 	/* Call without arguments and env variable "SOFTWARE" starting
 	   with "CUPS" (Backend in discovery mode) */
-	printf("network %s \"%s\" \"%s (driverless)\" \"%s\" \"\"\n",
-	       service_uri, make_and_model, make_and_model,
-	       device_id);
+	char device_info[sizeof(make_and_model) + 16];
+
+	snprintf(device_info, sizeof(device_info), "%s (driverless)",
+		 make_and_model);
+	cupsBackendReport("network", service_uri, make_and_model,
+			  device_info, device_id, NULL);
       }
     }
 
