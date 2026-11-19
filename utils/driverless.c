@@ -517,7 +517,7 @@ list_printers (int mode, int reg_type_no, int isFax)
     while ((bytes = cupsFileGetLine(fp, buffer, sizeof(buffer))) > 0 ||
 	   (bytes < 0 && (errno == EAGAIN || errno == EINTR))) {
       ptr = buffer;
-      while (ptr && !isalnum(*ptr & 255)) ptr ++;
+      while (*ptr && !isalnum(*ptr & 255)) ptr ++;
       if ((!strncasecmp(ptr, "ipps", 4) && ptr[4] == '\t')) {
 	ptr += 4;
 	*ptr = '\0';
