@@ -2216,16 +2216,26 @@ read_ppd_file(const char *filename)
     else if (current_opt && !strcmp(key, current_opt->name))
     {
       // *<option> <choice>[/translation]: <code>
-      if (current_opt->style == 'C' &&
-	  !is_allowed_value(known_hashes, value->data, strlen(value->data)))
+      //
+      // An option only becomes a command-line option through its
+      // "*FoomaticRIPOption" line, and that line may come after its
+      // choices, so the style is not necessarily known here yet.  Note the
+      // option down and let the check after the parse refuse it if it turns
+      // out to put its choices into the renderer command line.
+      if (!is_allowed_value(known_hashes, value->data, strlen(value->data)))
       {
-	cupsArrayDelete(known_hashes);
-	fclose(fh);
+	if (current_opt->style == 'C')
+	{
+	  cupsArrayDelete(known_hashes);
+	  fclose(fh);
 
-	rip_die(EXIT_PRNERR_NOTALLOWED,
-		"ERROR: The value of option %s choice %s is not among "
-		"the allowed values - see foomatic-rip man page for "
-		"more instructions.\n", key, name);
+	  rip_die(EXIT_PRNERR_NOTALLOWED,
+		  "ERROR: The value of option %s choice %s is not among "
+		  "the allowed values - see foomatic-rip man page for "
+		  "more instructions.\n", key, name);
+	}
+
+	current_opt->unlisted_choice = 1;
       }
 
       option_set_choice(current_opt, name, text, value->data);
@@ -2325,6 +2335,20 @@ read_ppd_file(const char *filename)
 
   fclose(fh);
   free_dstr(value);
+
+  // Options whose choices were read before their "*FoomaticRIPOption" line
+  // are only known to be command-line options now
+  for (opt = optionlist; opt; opt = opt->next)
+    if (opt->unlisted_choice && option_is_commandline_arg(opt))
+      break;
+
+  cupsArrayDelete(known_hashes);
+
+  if (opt)
+    rip_die(EXIT_PRNERR_NOTALLOWED,
+	    "ERROR: A choice value of option %s is not among the allowed "
+	    "values - see foomatic-rip man page for more instructions.\n",
+	    opt->name);
 
   // Validate default options by resetting them with option_set_value()
   for (opt = optionlist; opt; opt = opt->next)

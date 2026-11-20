@@ -80,6 +80,9 @@ typedef struct option_s
 
   int notfirst;               // TODO remove
 
+  int unlisted_choice;        // A choice value was not among the allowed
+                              // values (see read_ppd_file())
+
   choice_t *choicelist;
 
   // Foomatic PPD extensions
