@@ -1069,6 +1069,18 @@ StartPage(ppd_file_t         *ppd,	// I - PPD file
       exit(1);
     }
 
+    //
+    // cupsRowFeed comes from the page header; a negative feed (or one big
+    // enough to overflow "subrow + DotRowFeed" or "y") makes the subrow
+    // computed below index DotBands[] out of bounds...
+    //
+
+    if (DotRowFeed < 0 || DotRowFeed > INT_MAX / (modrow + 1))
+    {
+      fprintf(stderr, "ERROR: Invalid ESC/P row feed %d\n", DotRowFeed);
+      exit(1);
+    }
+
     if (DotRowFeed == 0)
     {
       //
