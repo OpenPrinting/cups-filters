@@ -834,6 +834,9 @@ _print_ps(stream_t *stream)
 		     linetype == LT_FOOMATIC_RIP_OPTION_SETTING)))
 	  {
 	    // parse
+	    // The value comes from the job data and can end up in the
+	    // renderer command line, so drop shell special characters from
+	    // it, as init_cups() does for the options on the command line
 	    if (linetype == LT_BEGIN_FEATURE)
 	    {
 	      dstrcpy(tmp, line->data);
@@ -843,7 +846,7 @@ _print_ps(stream_t *stream)
 	      strlcpy(optionname, p ? p : "", 128);
 	      p = strtok(NULL, " \t\r\n"); // value
 	      fromcomposite = 0;
-	      strlcpy(value, p ? p : "", 128);
+	      strncpy_omit(value, p ? p : "", 128, omit_shellescapes);
 	    }
 	    else
 	    { // LT_FOOMATIC_RIP_OPTION_SETTING
@@ -860,7 +863,7 @@ _print_ps(stream_t *stream)
 	      }
 	      else
 		fromcomposite = 0;
-	      strlcpy(value, p ? p : "", 128);
+	      strncpy_omit(value, p ? p : "", 128, omit_shellescapes);
 	    }
 
 	    // Mark that we are in a "Feature" section
