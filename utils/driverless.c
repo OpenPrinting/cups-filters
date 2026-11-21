@@ -57,7 +57,7 @@ static int
 convert_to_port(char *a)
 {
   int port = 0;
-  for( int i = 0; i<strlen(a); i++)
+  for (int i = 0; a[i] && isdigit((unsigned char)a[i]); i++)
     port = port*10 + (a[i] - '0');
 
   return (port);
