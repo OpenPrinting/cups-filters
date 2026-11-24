@@ -761,6 +761,9 @@ create_job()
   jobparams_t *job = calloc(1, sizeof(jobparams_t));
   struct passwd *passwd;
 
+  if (!job)
+    rip_die(1, "ERROR: out of memory (calloc failed)");
+
   job->optstr = create_dstr();
   job->time = time(NULL);
   strcpy(job->copies, "1");
@@ -813,7 +816,7 @@ main(int argc,
     return (0);
   }
 
-  if ((modern_shell = (char*)calloc(strlen(SHELL) + 1, sizeof(char*))) == NULL)
+  if ((modern_shell = (char*)calloc(strlen(SHELL) + 1, sizeof(char))) == NULL)
   {
     printf("ERROR: modern_shell - not enough memory.\n");
     list_free(arglist);

@@ -540,9 +540,13 @@ make_absolute_path(char *path,
   if (path[0] != '/')
   {
     tmp = malloc(len +1);
+    if (!tmp)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
     strlcpy(tmp, path, len);
 
     cwd = malloc(len);
+    if (!cwd)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
     if (getcwd(cwd, len) != NULL)
     {
       strlcpy(path, cwd, len);
@@ -633,6 +637,8 @@ argv_split(const char *string,
     return (NULL);
 
   argv = malloc((cnt + 1) * sizeof(char *));
+  if (!argv)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   argv[cnt] = NULL;
 
   for (i = 0; i < cnt; i++)
@@ -640,6 +646,8 @@ argv_split(const char *string,
     size_t len = strcspn(string, separators);
     char *s;
     s = malloc(len + 1);
+    if (!s)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
     strncpy(s, string, len);
     s[len] = '\0';
     argv[i] = s;
@@ -1307,6 +1315,8 @@ list_t *
 list_create()
 {
   list_t *l = malloc(sizeof(list_t));
+  if (!l)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   l->first = NULL;
   l->last = NULL;
   return (l);
@@ -1373,6 +1383,8 @@ list_prepend(list_t *list,
     return;
 
   item = malloc(sizeof(listitem_t));
+  if (!item)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   item->data = data;
   item->prev = NULL;
 
@@ -1399,6 +1411,8 @@ void list_append(list_t *list, void *data)
     return;
 
   item = malloc(sizeof(listitem_t));
+  if (!item)
+    rip_die(1, "ERROR: out of memory (malloc failed)");
   item->data = data;
   item->next = NULL;
 

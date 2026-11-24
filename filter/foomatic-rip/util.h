@@ -79,7 +79,12 @@ enum filetype {
 
 // logging and exiting...
 void _log(const char* msg, ...);
-_Noreturn void rip_die(int status, const char *msg, ...);
+// __attribute__((noreturn)) on top of _Noreturn because cppcheck does not
+// understand C11 _Noreturn and would otherwise assume that rip_die() can
+// return, flagging every "if (!p) rip_die(...);" check as a possible NULL
+// pointer dereference.
+_Noreturn void rip_die(int status, const char *msg, ...)
+  __attribute__((noreturn));
 int redirect_log_to_stderr();
 void close_log();
 
