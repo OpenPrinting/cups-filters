@@ -540,6 +540,8 @@ option_assure_value(option_t *opt,
   if (!val)
   {
     val = calloc(1, sizeof(value_t));
+    if (!val)
+      rip_die(1, "ERROR: out of memory (calloc failed)");
     val->optionset = optionset;
 
     // append to opt->valuelist
@@ -792,6 +794,8 @@ paramvalues_from_string(option_t *opt,
   if (opt->param_count == 1)
   {
     paramvalues = malloc(sizeof(char*));
+    if (!paramvalues)
+      rip_die(1, "ERROR: out of memory (malloc failed)");
     paramvalues[0] =
       get_valid_param_string(opt, opt->paramlist,
 			     startswith(str, "Custom.") ? &str[7] : str);
@@ -1394,6 +1398,8 @@ option_assure_choice(option_t *opt,
   if (!choice)
   {
     choice = calloc(1, sizeof(choice_t));
+    if (!choice)
+      rip_die(1, "ERROR: out of memory (calloc failed)");
     if (last)
       last->next = choice;
     else
@@ -1704,6 +1710,9 @@ option_add_custom_param_from_string(option_t *opt,
   char typestr[33];
   int n;
 
+  if (!param)
+    rip_die(1, "ERROR: out of memory (calloc failed)");
+
   strlcpy(param->name, name, 128);
   strlcpy(param->text, text, 128);
 
@@ -1773,6 +1782,8 @@ option_assure_foomatic_param(option_t *opt)
     return (opt->foomatic_param);
 
   param = calloc(1, sizeof(param_t));
+  if (!param)
+    rip_die(1, "ERROR: out of memory (calloc failed)");
   strcpy(param->name, "foomatic-param");
   param->order = 0;
   param->type = opt->type;
@@ -2317,6 +2328,8 @@ read_ppd_file(const char *filename)
     {
       //  "*cupsICCProfile: <qualifier/Title> <filename>"
       entry = calloc(1, sizeof(icc_mapping_entry_t));
+      if (!entry)
+        rip_die(1, "ERROR: out of memory (calloc failed)");
       entry->qualifier = strdup(name);
       entry->filename = strdup(value->data);
       list_append (qualifier_data, entry);
@@ -2555,8 +2568,12 @@ build_commandline(int optset,
       // Insert the processed argument in the command line
       // just before every occurrence of the spot marker.
       p = malloc(3);
+      if (!p)
+        rip_die(1, "ERROR: out of memory (malloc failed)");
       snprintf(p, 3, "%%%c", opt->spot);
       s = malloc(cmdvar->len +3);
+      if (!s)
+        rip_die(1, "ERROR: out of memory (malloc failed)");
       snprintf(s, cmdvar->len +3, "%s%%%c", cmdvar->data, opt->spot);
       dstrreplace(cmdline, p, s, 0);
       free(p);
@@ -2570,6 +2587,8 @@ build_commandline(int optset,
 	continue;
       size_t s_size = strlen(opt->name) + strlen(userval) + 20;
       s = malloc(s_size);
+      if (!s)
+        rip_die(1, "ERROR: out of memory (malloc failed)");
       snprintf(s, s_size, "%s=%s %%Y", opt->name, userval);
       dstrreplace(cmdline, "%Y", s, 0);
       free(s);
