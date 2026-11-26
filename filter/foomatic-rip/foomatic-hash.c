@@ -284,7 +284,13 @@ find_foomaticrip_keywords(cups_array_t *data, // O - Array with values of Foomat
 
     if (value->data[0] == '\"')
     {
-      memmove(value->data, value->data +1, value->len +1);
+      //
+      // Shift the string and its terminator down, not the byte after it:
+      // "value" is only value->alloc bytes long and the continuation loop
+      // above can leave value->len == value->alloc - 1...
+      //
+
+      memmove(value->data, value->data +1, value->len);
       p = strrchr(value->data, '\"');
       if (!p)
       {
